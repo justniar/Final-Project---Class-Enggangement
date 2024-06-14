@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import * as faceapi from 'face-api.js';
 import axios from 'axios';
+
 import './App.css';
 
 function App() {
@@ -8,6 +10,21 @@ function App() {
   const canvasRef = useRef(null);
 
   useEffect(() => {
+    // Load face-api models
+    const loadModels = async () => {
+      try {
+        await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+        await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+        await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+        console.log("Models loaded successfully");
+        startFaceDetection();
+      } catch (error) {
+        console.error("Error loading models:", error);
+      }
+    };
+
+    loadModels();
+
     // Start the video stream when the component mounts
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
@@ -18,13 +35,39 @@ function App() {
       .catch(err => console.error("Error accessing webcam: ", err));
   }, []);
 
-  const captureFrame = async () => {
+  const startFaceDetection = async () => {
     if (!canvasRef.current || !videoRef.current) return;
 
-    const canvas = canvasRef.current;
     const video = videoRef.current;
+    const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    try {
+      setInterval(async () => {
+        const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
+
+        if (detections) {
+          const { x, y, width, height } = detections.box;
+
+          canvas.width = width;
+          canvas.height = height;
+          context.drawImage(video, x, y, width, height, 0, 0, width, height);
+
+          const faceImage = context.getImageData(0, 0, width, height);
+          predictExpressionOnFrame(faceImage);
+        }
+      }, 100); // Adjust the interval as needed
+    } catch (error) {
+      console.error("Error detecting face:", error);
+    }
+  };
+
+  const predictExpressionOnFrame = async (faceImage) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = faceImage.width;
+    canvas.height = faceImage.height;
+    const context = canvas.getContext('2d');
+    context.putImageData(faceImage, 0, 0);
 
     canvas.toBlob(async (blob) => {
       const formData = new FormData();
@@ -38,20 +81,19 @@ function App() {
         });
         setPredictedClass(response.data.predicted_class);
       } catch (error) {
-        console.error("Error predicting frame: ", error);
+        console.error("Error predicting frame:", error);
       }
     }, 'image/jpeg');
   };
 
   return (
     <>
+      {predictedClass !== null && (
+        <p>Predicted Class: {predictedClass}</p>
+      )}
       <div className="video-container">
         <video ref={videoRef} autoPlay playsInline></video>
-        <canvas ref={canvasRef} width="640" height="480" style={{ display: 'none' }}></canvas>
-        <button onClick={captureFrame}>Capture Frame</button>
-        {predictedClass !== null && (
-          <p>Predicted Class: {predictedClass}</p>
-        )}
+        <canvas ref={canvasRef}></canvas>
       </div>
     </>
   );

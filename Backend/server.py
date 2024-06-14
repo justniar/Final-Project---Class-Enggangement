@@ -1,45 +1,43 @@
 from flask import Flask, request, jsonify
-import cv2
-import numpy as np
 from tensorflow.keras.models import load_model
-import os
+import numpy as np
+from PIL import Image
+import io
 
 app = Flask(__name__)
 
 # Load the Keras model
-model_path = 'model_daisee_yawdd.h5'  # Update this path if necessary
-if not os.path.exists(model_path):
-    print(f"Error: Model file {model_path} does not exist.")
-    exit()
+model = load_model('model/model_daisee_yawdd.h5')
 
-try:
-    model = load_model(model_path)
-    print("Model loaded successfully.")
-except Exception as e:
-    print(f"Error loading model: {e}")
-    exit()
-
-def preprocess_frame(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    resized = cv2.resize(gray, (48, 48))
-    normalized = resized / 255.0
-    reshaped = np.reshape(normalized, (1, 48, 48, 1))
-    return reshaped
-
+# Define a route for the prediction
 @app.route('/predict', methods=['POST'])
 def predict():
-    if 'frame' not in request.files:
-        return jsonify({"error": "No frame provided"}), 400
+    try:
+        # Get the image file from the request
+        file = request.files['frame'].read()
+        image = Image.open(io.BytesIO(file))
 
-    frame_file = request.files['frame']
-    frame_array = np.frombuffer(frame_file.read(), np.uint8)
-    frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-    
-    preprocessed_frame = preprocess_frame(frame)
-    prediction = model.predict(preprocessed_frame)
-    predicted_class = np.argmax(prediction)
+        # Convert the image to grayscale and resize to 48x48
+        image = image.convert('L')
+        image = image.resize((48, 48))
 
-    return jsonify({"predicted_class": int(predicted_class)})
+        # Convert to numpy array and normalize
+        img_array = np.array(image) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = np.expand_dims(img_array, axis=-1)
+
+        # Make prediction
+        prediction = model.predict(img_array)
+        predicted_class = np.argmax(prediction)
+
+        # Define class labels
+        classes = ["engaged", "bored", "frustrated", "confused", "Closed", "Open", "no_yawn", "yawn"]
+        result = classes[predicted_class]
+
+        return jsonify({'predicted_class': result})
+
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
