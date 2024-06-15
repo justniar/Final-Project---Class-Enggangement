@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from tensorflow.keras.models import load_model
 import numpy as np
 from PIL import Image
 import io
 
 app = Flask(__name__)
+CORS(app)
 
 # Load the Keras model
 model = load_model('model/model_daisee_yawdd.h5')

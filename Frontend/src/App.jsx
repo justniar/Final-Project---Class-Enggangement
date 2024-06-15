@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from 'face-api.js';
 import axios from 'axios';
-
 import './App.css';
 
 function App() {
@@ -10,64 +9,65 @@ function App() {
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    // Load face-api models
     const loadModels = async () => {
       try {
         await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
         await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
         await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
+        await faceapi.nets.faceExpressionNet.loadFromUri('/models');
         console.log("Models loaded successfully");
-        startFaceDetection();
+        startVideo();
       } catch (error) {
         console.error("Error loading models:", error);
       }
     };
 
-    loadModels();
+    const startVideo = () => {
+      navigator.mediaDevices.getUserMedia({ video: {} })
+        .then(stream => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.onloadedmetadata = () => {
+              videoRef.current.play();
+              startFaceDetection();
+            };
+          }
+        })
+        .catch(err => console.error("Error accessing webcam: ", err));
+    };
 
-    // Start the video stream when the component mounts
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      })
-      .catch(err => console.error("Error accessing webcam: ", err));
+    loadModels();
   }, []);
 
   const startFaceDetection = async () => {
     if (!canvasRef.current || !videoRef.current) return;
 
     const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
+    const canvas = faceapi.createCanvasFromMedia(video);
+    document.body.append(canvas);
+    const displaySize = { width: video.width, height: video.height };
+    faceapi.matchDimensions(canvas, displaySize);
 
-    try {
-      setInterval(async () => {
-        const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
+    setInterval(async () => {
+      const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions();
+      const resizedDetections = faceapi.resizeResults(detections, displaySize);
+      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+      faceapi.draw.drawDetections(canvas, resizedDetections);
+      faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
 
-        if (detections) {
-          const { x, y, width, height } = detections.box;
-
-          canvas.width = width;
-          canvas.height = height;
-          context.drawImage(video, x, y, width, height, 0, 0, width, height);
-
-          const faceImage = context.getImageData(0, 0, width, height);
-          predictExpressionOnFrame(faceImage);
-        }
-      }, 100); // Adjust the interval as needed
-    } catch (error) {
-      console.error("Error detecting face:", error);
-    }
+      if (resizedDetections.length > 0) {
+        predictExpressionOnFrame(resizedDetections[0]);
+      }
+    }, 100);
   };
 
-  const predictExpressionOnFrame = async (faceImage) => {
+  const predictExpressionOnFrame = async (detection) => {
+    const { x, y, width, height } = detection.detection.box;
     const canvas = document.createElement('canvas');
-    canvas.width = faceImage.width;
-    canvas.height = faceImage.height;
+    canvas.width = width;
+    canvas.height = height;
     const context = canvas.getContext('2d');
-    context.putImageData(faceImage, 0, 0);
+    context.drawImage(videoRef.current, x, y, width, height, 0, 0, width, height);
 
     canvas.toBlob(async (blob) => {
       const formData = new FormData();
@@ -88,12 +88,23 @@ function App() {
 
   return (
     <>
-      {predictedClass !== null && (
-        <p>Predicted Class: {predictedClass}</p>
-      )}
       <div className="video-container">
-        <video ref={videoRef} autoPlay playsInline></video>
-        <canvas ref={canvasRef}></canvas>
+        <video ref={videoRef} width="720" height="560" autoPlay muted></video>
+        <canvas ref={canvasRef} style={{ position: 'absolute' }}></canvas>
+        {predictedClass && (
+          <div className="prediction" style={{
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            padding: '10px',
+            borderRadius: '5px',
+            fontSize: '18px',
+            fontWeight: 'bold'
+          }}>
+            Predicted Expression: {predictedClass}
+          </div>
+        )}
       </div>
     </>
   );
