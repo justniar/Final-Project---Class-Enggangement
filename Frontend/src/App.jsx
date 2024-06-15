@@ -65,44 +65,50 @@ function App() {
     }, 100);
   };
 
-  const predictExpressionOnFrame = async (detection, canvas) => {
-    const { x, y, width, height } = detection.detection.box;
+  const predictExpressionOnFrame = async (detections, canvas) => {
     const context = canvas.getContext('2d');
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = width;
-    tempCanvas.height = height;
-    const tempContext = tempCanvas.getContext('2d');
-    tempContext.drawImage(videoRef.current, x, y, width, height, 0, 0, width, height);
-
-    tempCanvas.toBlob(async (blob) => {
-      const formData = new FormData();
-      formData.append('frame', blob, 'frame.jpg');
-
-      try {
-        const response = await axios.post('http://localhost:5000/predict', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-
-        const newPrediction = response.data.predicted_class;
-        setPredictedClass(newPrediction);
-
-        setPredictions(prevPredictions => [...prevPredictions, { expression: newPrediction, time: new Date().toLocaleTimeString() }]);
-
-
-        // Draw the predicted expression in a blue rectangle above the bounding box
-        context.fillStyle = 'blue';
-        context.fillRect(x, y - 30, width, 25);  // Adjust rectangle size and position as needed
-        context.font = '18px Arial';
-        context.fillStyle = 'white';
-        context.fillText(`Expression: ${newPrediction}`, x + 5, y - 10);
-      } catch (error) {
-        console.error("Error predicting frame:", error);
-      }
-    }, 'image/jpeg');
-  };
-
+    context.clearRect(0, 0, canvas.width, canvas.height);
+  
+    if (!Array.isArray(detections)) {
+      detections = [detections]; // Convert single detection to array
+    }
+  
+    detections.forEach(async (detection) => {
+      const { x, y, width, height } = detection.detection.box;
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = width;
+      tempCanvas.height = height;
+      const tempContext = tempCanvas.getContext('2d');
+      tempContext.drawImage(videoRef.current, x, y, width, height, 0, 0, width, height);
+  
+      tempCanvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('frame', blob, 'frame.jpg');
+  
+        try {
+          const response = await axios.post('http://localhost:5000/predict', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          });
+  
+          const newPrediction = response.data.predicted_class;
+  
+          // Draw the predicted expression in a blue rectangle above the bounding box
+          context.fillStyle = 'blue';
+          context.fillRect(x, y - 30, width, 25);  // Adjust rectangle size and position as needed
+          context.font = '18px Arial';
+          context.fillStyle = 'white';
+          context.fillText(`Expression: ${newPrediction}`, x + 5, y - 10);
+  
+          setPredictions(prevPredictions => [...prevPredictions, { expression: newPrediction, time: new Date().toLocaleTimeString() }]);
+        } catch (error) {
+          console.error("Error predicting frame:", error);
+        }
+      }, 'image/jpeg');
+    });
+  };  
+  
   return (
     <>
     <div className="video-container" style={{ position: 'relative' }}>
