@@ -5,22 +5,27 @@ import './App.css';
 
 function App() {
   const [predictedClass, setPredictedClass] = useState(null);
+  const [predictions, setPredictions] = useState([]);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const loadModels = async () => {
       try {
-        await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
-        await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
-        await faceapi.nets.faceRecognitionNet.loadFromUri('/models');
-        await faceapi.nets.faceExpressionNet.loadFromUri('/models');
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+          faceapi.nets.faceExpressionNet.loadFromUri('/models')
+        ]);
         console.log("Models loaded successfully");
         startVideo();
       } catch (error) {
         console.error("Error loading models:", error);
       }
     };
+    
 
     const startVideo = () => {
       navigator.mediaDevices.getUserMedia({ video: {} })
@@ -43,8 +48,7 @@ function App() {
     if (!canvasRef.current || !videoRef.current) return;
 
     const video = videoRef.current;
-    const canvas = faceapi.createCanvasFromMedia(video);
-    document.body.append(canvas);
+    const canvas = canvasRef.current;
     const displaySize = { width: video.width, height: video.height };
     faceapi.matchDimensions(canvas, displaySize);
 
@@ -56,20 +60,21 @@ function App() {
       faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
 
       if (resizedDetections.length > 0) {
-        predictExpressionOnFrame(resizedDetections[0]);
+        predictExpressionOnFrame(resizedDetections[0], canvas);
       }
     }, 100);
   };
 
-  const predictExpressionOnFrame = async (detection) => {
+  const predictExpressionOnFrame = async (detection, canvas) => {
     const { x, y, width, height } = detection.detection.box;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
     const context = canvas.getContext('2d');
-    context.drawImage(videoRef.current, x, y, width, height, 0, 0, width, height);
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempContext = tempCanvas.getContext('2d');
+    tempContext.drawImage(videoRef.current, x, y, width, height, 0, 0, width, height);
 
-    canvas.toBlob(async (blob) => {
+    tempCanvas.toBlob(async (blob) => {
       const formData = new FormData();
       formData.append('frame', blob, 'frame.jpg');
 
@@ -79,7 +84,19 @@ function App() {
             'Content-Type': 'multipart/form-data',
           },
         });
-        setPredictedClass(response.data.predicted_class);
+
+        const newPrediction = response.data.predicted_class;
+        setPredictedClass(newPrediction);
+
+        setPredictions(prevPredictions => [...prevPredictions, { expression: newPrediction, time: new Date().toLocaleTimeString() }]);
+
+
+        // Draw the predicted expression in a blue rectangle above the bounding box
+        context.fillStyle = 'blue';
+        context.fillRect(x, y - 30, width, 25);  // Adjust rectangle size and position as needed
+        context.font = '18px Arial';
+        context.fillStyle = 'white';
+        context.fillText(`Expression: ${newPrediction}`, x + 5, y - 10);
       } catch (error) {
         console.error("Error predicting frame:", error);
       }
@@ -88,25 +105,28 @@ function App() {
 
   return (
     <>
-      <div className="video-container">
-        <video ref={videoRef} width="720" height="560" autoPlay muted></video>
-        <canvas ref={canvasRef} style={{ position: 'absolute' }}></canvas>
-        {predictedClass && (
-          <div className="prediction" style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-            padding: '10px',
-            borderRadius: '5px',
-            fontSize: '18px',
-            fontWeight: 'bold'
-          }}>
-            Predicted Expression: {predictedClass}
-          </div>
-        )}
-      </div>
+    <div className="video-container" style={{ position: 'relative' }}>
+      <video ref={videoRef} width="720" height="560" style={{ position: 'absolute' }} autoPlay muted></video>
+      <canvas ref={canvasRef} width="720" height="560" style={{ position: 'absolute' }}></canvas>
+    </div>
+    <table className="predictions-table" style={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'white', padding: '10px' }}>
+        <thead>
+          <tr>
+            <th>Expression</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {predictions.map((prediction, index) => (
+            <tr key={index}>
+              <td>{prediction.expression}</td>
+              <td>{prediction.time}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </>
+    
   );
 }
 
