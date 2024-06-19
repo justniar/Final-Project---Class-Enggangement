@@ -6,10 +6,11 @@ import './App.css';
 function App() {
   const [predictedClass, setPredictedClass] = useState(null);
   const [predictions, setPredictions] = useState([]);
+  const [isWebcamActive, setIsWebcamActive] = useState(true);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const lastPredictionRef = useRef(null); // To store the last prediction
+  const lastPredictionRef = useRef(null);
 
   useEffect(() => {
     const loadModels = async () => {
@@ -27,22 +28,22 @@ function App() {
       }
     };
 
-    const startVideo = () => {
-      navigator.mediaDevices.getUserMedia({ video: {} })
-        .then(stream => {
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.onloadedmetadata = () => {
-              videoRef.current.play();
-              startFaceDetection();
-            };
-          }
-        })
-        .catch(err => console.error("Error accessing webcam: ", err));
-    };
-
     loadModels();
   }, []);
+
+  const startVideo = () => {
+    navigator.mediaDevices.getUserMedia({ video: {} })
+      .then(stream => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play();
+            startFaceDetection();
+          };
+        }
+      })
+      .catch(err => console.error("Error accessing webcam: ", err));
+  };
 
   const startFaceDetection = async () => {
     if (!canvasRef.current || !videoRef.current) return;
@@ -52,7 +53,12 @@ function App() {
     const displaySize = { width: video.width, height: video.height };
     faceapi.matchDimensions(canvas, displaySize);
 
-    setInterval(async () => {
+    const intervalId = setInterval(async () => {
+      if (!isWebcamActive) {
+        clearInterval(intervalId);
+        return;
+      }
+
       const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions();
       const resizedDetections = faceapi.resizeResults(detections, displaySize);
       canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
@@ -70,7 +76,7 @@ function App() {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
     tempCanvas.height = height;
-    const tempContext = tempCanvas.getContext('2d', { willReadFrequently: true });  // Set willReadFrequently to true
+    const tempContext = tempCanvas.getContext('2d', { willReadFrequently: true });
     tempContext.drawImage(videoRef.current, x, y, width, height, 0, 0, width, height);
 
     tempCanvas.toBlob(async (blob) => {
@@ -86,14 +92,12 @@ function App() {
 
         const newPrediction = response.data.predicted_class;
 
-        // Update only if the prediction changes
         if (newPrediction !== lastPredictionRef.current) {
           lastPredictionRef.current = newPrediction;
 
-          // Draw the predicted expression in a blue rectangle above the bounding box
-          const context = canvas.getContext('2d', { willReadFrequently: true });  // Set willReadFrequently to true
+          const context = canvas.getContext('2d', { willReadFrequently: true });  
           context.fillStyle = 'blue';
-          context.fillRect(x, y - 30, width, 25);  // Adjust rectangle size and position as needed
+          context.fillRect(x, y - 30, width, 25); 
           context.font = '18px Arial';
           context.fillStyle = 'white';
           context.fillText(`Expression: ${newPrediction}`, x + 5, y - 10);
@@ -106,10 +110,22 @@ function App() {
     }, 'image/jpeg');
   };
 
+  const clearPredictions = () => {
+    setPredictions([]);
+  };
+
+  const toggleWebcam = () => {
+    setIsWebcamActive(!isWebcamActive);
+  };
+
   return (
     <>
+      <div className="controls">
+        <button onClick={toggleWebcam}>{isWebcamActive ? 'Stop Webcam' : 'Start Webcam'}</button>
+        <button onClick={clearPredictions}>Clear Predictions</button>
+      </div>
       <div className="video-container" style={{ position: 'relative' }}>
-        <video ref={videoRef} width="720" height="560" style={{ position: 'absolute' }} autoPlay muted></video>
+        {isWebcamActive && <video ref={videoRef} width="720" height="560" style={{ position: 'absolute' }} autoPlay muted></video>}
         <canvas ref={canvasRef} width="720" height="560" style={{ position: 'absolute' }}></canvas>
       </div>
       <table className="predictions-table" style={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'white', padding: '10px' }}>

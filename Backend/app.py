@@ -38,17 +38,19 @@ def predict():
 
         class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
         predicted_class_label = class_labels[predicted_class]
+        
+        print(f"Predictions: {predictions}")
+        print(f"Predicted class index: {predicted_class}")
+        print(f"Predicted class label: {predicted_class_label}")
 
-        # Map the predicted class label to "fokus" or "mengantuk"
-        if predicted_class_label in ['Open', 'no_yawn']:
-            predicted_class_label = 'fokus'
-        elif predicted_class_label in ['Closed', 'yawn']:
-            predicted_class_label = 'mengantuk'
-
-        return jsonify({'predicted_class': predicted_class_label})
+        return jsonify({
+            'predicted_class': predicted_class_label,
+            'raw_predictions': predictions.tolist()  # Convert to list for JSON serialization
+        })
     except Exception as e:
         logging.error(f"Error processing prediction: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
