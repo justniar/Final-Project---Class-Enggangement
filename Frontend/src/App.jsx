@@ -6,8 +6,10 @@ import './App.css';
 function App() {
   const [predictedClass, setPredictedClass] = useState(null);
   const [predictions, setPredictions] = useState([]);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const lastPredictionRef = useRef(null); // To store the last prediction
 
   useEffect(() => {
     const loadModels = async () => {
@@ -68,7 +70,7 @@ function App() {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
     tempCanvas.height = height;
-    const tempContext = tempCanvas.getContext('2d');
+    const tempContext = tempCanvas.getContext('2d', { willReadFrequently: true });  // Set willReadFrequently to true
     tempContext.drawImage(videoRef.current, x, y, width, height, 0, 0, width, height);
 
     tempCanvas.toBlob(async (blob) => {
@@ -84,15 +86,20 @@ function App() {
 
         const newPrediction = response.data.predicted_class;
 
-        // Draw the predicted expression in a blue rectangle above the bounding box
-        const context = canvas.getContext('2d');
-        context.fillStyle = 'blue';
-        context.fillRect(x, y - 30, width, 25);  // Adjust rectangle size and position as needed
-        context.font = '18px Arial';
-        context.fillStyle = 'white';
-        context.fillText(`Expression: ${newPrediction}`, x + 5, y - 10);
+        // Update only if the prediction changes
+        if (newPrediction !== lastPredictionRef.current) {
+          lastPredictionRef.current = newPrediction;
 
-        setPredictions(prevPredictions => [...prevPredictions, { expression: newPrediction, time: new Date().toLocaleTimeString() }]);
+          // Draw the predicted expression in a blue rectangle above the bounding box
+          const context = canvas.getContext('2d', { willReadFrequently: true });  // Set willReadFrequently to true
+          context.fillStyle = 'blue';
+          context.fillRect(x, y - 30, width, 25);  // Adjust rectangle size and position as needed
+          context.font = '18px Arial';
+          context.fillStyle = 'white';
+          context.fillText(`Expression: ${newPrediction}`, x + 5, y - 10);
+
+          setPredictions(prevPredictions => [...prevPredictions, { expression: newPrediction, time: new Date().toLocaleTimeString() }]);
+        }
       } catch (error) {
         console.error("Error predicting frame:", error);
       }
