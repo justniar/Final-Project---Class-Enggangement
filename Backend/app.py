@@ -39,6 +39,12 @@ def predict():
         class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
         predicted_class_label = class_labels[predicted_class]
 
+        # Map the predicted class label to "fokus" or "mengantuk"
+        if predicted_class_label in ['Open', 'no_yawn']:
+            predicted_class_label = 'fokus'
+        elif predicted_class_label in ['Closed', 'yawn']:
+            predicted_class_label = 'mengantuk'
+
         return jsonify({'predicted_class': predicted_class_label})
     except Exception as e:
         logging.error(f"Error processing prediction: {str(e)}")
