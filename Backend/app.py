@@ -16,7 +16,7 @@ class CustomSparseCategoricalCrossentropy(SparseCategoricalCrossentropy):
         super().__init__(from_logits=from_logits, reduction='none', name='custom_sparse_categorical_crossentropy')
 
 # Load your model here
-model_path = 'model/ClassEnggagementDetectionDrownsiness.h5'
+model_path = 'model/ClassEnggagementDetectionDrownsinessTune.h5'
 model = load_model(model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
 
 @app.route('/predict', methods=['POST'])
