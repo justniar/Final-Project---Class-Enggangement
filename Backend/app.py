@@ -15,14 +15,16 @@ class CustomSparseCategoricalCrossentropy(SparseCategoricalCrossentropy):
     def __init__(self, from_logits=False):
         super().__init__(from_logits=from_logits, reduction='none', name='custom_sparse_categorical_crossentropy')
 
-# Load your model here
-model_path = 'model/ClassEnggagementDetectionDrownsinessTune.h5'
-model = load_model(model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
+# Load your models here
+user_recognition_model_path = 'model/ClassEnggagementDetectionDrownsinessTune.h5'
+expression_recognition_model_path = 'model/ClassEnggagementDetectionDrownsinessTune.h5'
+
+user_recognition_model = load_model(user_recognition_model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
+expression_recognition_model = load_model(expression_recognition_model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        # Read the image from the request
         if 'frame' not in request.files:
             return jsonify({'error': 'No image part in the request'}), 400
 
@@ -33,21 +35,32 @@ def predict():
         img = img / 255.0  # Normalize
         img = np.expand_dims(img, axis=0)
 
-        predictions = model.predict(img)
-        predicted_class = np.argmax(predictions)
+        # User recognition prediction
+        user_predictions = user_recognition_model.predict(img)
+        user_predicted_class = np.argmax(user_predictions)
 
-        class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
-        predicted_class_label = class_labels[predicted_class]
+        # Expression recognition prediction
+        expression_predictions = expression_recognition_model.predict(img)
+        expression_predicted_class = np.argmax(expression_predictions)
+
+        # Define class labels
+        user_class_labels = ['User1', 'User2', 'User3']  # Replace with actual user labels
+        expression_class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
+
+        user_predicted_class_label = user_class_labels[user_predicted_class]
+        expression_predicted_class_label = expression_class_labels[expression_predicted_class]
         
-        print(f"Predictions: {predictions}")
-        print(f"Predicted class index: {predicted_class}")
-        print(f"Predicted class label: {predicted_class_label}")
         # Map the predicted class label to "fokus" or "mengantuk"
-        if predicted_class_label in ['Open', 'no_yawn']:
-            predicted_class_label = 'fokus'
-        elif predicted_class_label in ['Closed', 'yawn']:
-            predicted_class_label = 'mengantuk'
-        return jsonify({'predicted_class': predicted_class_label})
+        if expression_predicted_class_label in ['Open', 'no_yawn']:
+            expression_predicted_class_label = 'fokus'
+        elif expression_predicted_class_label in ['Closed', 'yawn']:
+            expression_predicted_class_label = 'mengantuk'
+
+        return jsonify({
+            # 'user_predicted_class': user_predicted_class_label,
+            'user_predicted_class': 'salsa',
+            'expression_predicted_class': expression_predicted_class_label
+        })
     except Exception as e:
         logging.error(f"Error processing prediction: {str(e)}")
         return jsonify({'error': str(e)}), 500

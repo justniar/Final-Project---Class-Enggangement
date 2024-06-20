@@ -4,7 +4,8 @@ import axios from 'axios';
 import './App.css';
 
 function App() {
-  const [predictedClass, setPredictedClass] = useState(null);
+  const [predictedUser, setPredictedUser] = useState(null);
+  const [predictedExpression, setPredictedExpression] = useState(null);
   const [predictions, setPredictions] = useState([]);
   const [isWebcamActive, setIsWebcamActive] = useState(true);
 
@@ -66,12 +67,12 @@ function App() {
       faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
 
       if (resizedDetections.length > 0) {
-        predictExpressionOnFrame(resizedDetections[0], canvas);
+        predictOnFrame(resizedDetections[0], canvas);
       }
     }, 100);
   };
 
-  const predictExpressionOnFrame = async (detection, canvas) => {
+  const predictOnFrame = async (detection, canvas) => {
     const { x, y, width, height } = detection.detection.box;
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
@@ -90,19 +91,20 @@ function App() {
           },
         });
 
-        const newPrediction = response.data.predicted_class;
+        const { user_predicted_class, expression_predicted_class } = response.data;
 
-        if (newPrediction !== lastPredictionRef.current) {
-          lastPredictionRef.current = newPrediction;
+        if (expression_predicted_class !== lastPredictionRef.current) {
+          lastPredictionRef.current = expression_predicted_class;
 
           const context = canvas.getContext('2d', { willReadFrequently: true });  
           context.fillStyle = 'blue';
-          context.fillRect(x, y - 30, width, 25); 
+          context.fillRect(x, y - 50, width, 50); 
           context.font = '18px Arial';
           context.fillStyle = 'white';
-          context.fillText(`Expression: ${newPrediction}`, x + 5, y - 10);
+          context.fillText(`User: ${user_predicted_class}`, x + 5, y - 30);
+          context.fillText(`Expression: ${expression_predicted_class}`, x + 5, y - 10);
 
-          setPredictions(prevPredictions => [...prevPredictions, { expression: newPrediction, time: new Date().toLocaleTimeString() }]);
+          setPredictions(prevPredictions => [...prevPredictions, { user: user_predicted_class, expression: expression_predicted_class, time: new Date().toLocaleTimeString() }]);
         }
       } catch (error) {
         console.error("Error predicting frame:", error);
@@ -131,6 +133,7 @@ function App() {
       <table className="predictions-table" style={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'white', padding: '10px' }}>
         <thead>
           <tr>
+            <th>User</th>
             <th>Expression</th>
             <th>Time</th>
           </tr>
@@ -138,6 +141,7 @@ function App() {
         <tbody>
           {predictions.map((prediction, index) => (
             <tr key={index}>
+              <td>{prediction.user}</td>
               <td>{prediction.expression}</td>
               <td>{prediction.time}</td>
             </tr>
