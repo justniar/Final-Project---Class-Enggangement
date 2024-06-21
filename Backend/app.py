@@ -6,6 +6,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from tensorflow.keras.models import load_model
 from tensorflow.keras.losses import SparseCategoricalCrossentropy
+import psycopg2
 import logging
 
 app = Flask(__name__)
@@ -21,6 +22,13 @@ expression_recognition_model_path = 'model/ClassEnggagementDetectionDrownsinessT
 
 user_recognition_model = load_model(user_recognition_model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
 expression_recognition_model = load_model(expression_recognition_model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
+
+# Database connection details
+DATABASE_URL = "postgresql://postgres:postgres@localhost/engagement_db"
+
+def get_db_connection():
+    conn = psycopg2.connect(DATABASE_URL)
+    return conn
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -44,7 +52,7 @@ def predict():
         expression_predicted_class = np.argmax(expression_predictions)
 
         # Define class labels
-        user_class_labels = ['User1', 'User2', 'User3']  # Replace with actual user labels
+        user_class_labels = ['User1', 'User2', 'User3']
         expression_class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
 
         user_predicted_class_label = user_class_labels[user_predicted_class]
@@ -56,6 +64,19 @@ def predict():
         elif expression_predicted_class_label in ['Closed', 'yawn']:
             expression_predicted_class_label = 'mengantuk'
 
+        # save prediction to the database
+        nim = request.form.get(nim)
+        if nim: 
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(
+                    "INSERT INTO predictions (nim, expression) VALUES (%s, %s)",
+                    (nim, expression_predicted_class_label)
+                )
+            conn.commit()
+            cur.close()
+            conn.close()
+        
         return jsonify({
             # 'user_predicted_class': user_predicted_class_label,
             'user_predicted_class': 'salsa',
