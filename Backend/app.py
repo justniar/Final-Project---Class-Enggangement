@@ -65,12 +65,14 @@ def predict():
             expression_predicted_class_label = 'mengantuk'
 
         # save prediction to the database
-        nim = request.form.get(nim)
+        # nim = user_predicted_class_label
+        nim = 200511152
+
         if nim: 
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute(
-                    "INSERT INTO predictions (nim, expression) VALUES (%s, %s)",
+                    "INSERT INTO detections (nim, expression) VALUES (%s, %s)",
                     (nim, expression_predicted_class_label)
                 )
             conn.commit()

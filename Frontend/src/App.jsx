@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from 'face-api.js';
 import axios from 'axios';
-import './App.css';
 
 function App() {
   const [predictedUser, setPredictedUser] = useState(null);
@@ -122,32 +121,38 @@ function App() {
 
   return (
     <>
-      <div className="controls">
-        <button onClick={toggleWebcam}>{isWebcamActive ? 'Stop Webcam' : 'Start Webcam'}</button>
-        <button onClick={clearPredictions}>Clear Predictions</button>
+      <div className="p-4">
+      <div className="flex space-x-2 mb-4">
+        <button onClick={toggleWebcam} className="bg-blue-500 text-white py-2 px-4 rounded">
+          {isWebcamActive ? 'Stop Webcam' : 'Start Webcam'}
+        </button>
+        <button onClick={clearPredictions} className="bg-red-500 text-white py-2 px-4 rounded">
+          Clear Predictions
+        </button>
       </div>
-      <div className="video-container" style={{ position: 'relative' }}>
-        {isWebcamActive && <video ref={videoRef} width="720" height="560" style={{ position: 'absolute' }} autoPlay muted></video>}
-        <canvas ref={canvasRef} width="720" height="560" style={{ position: 'absolute' }}></canvas>
+      <div className="relative w-full h-[560px]">
+        {isWebcamActive && <video ref={videoRef} className="w-full h-full absolute" autoPlay muted></video>}
+        <canvas ref={canvasRef} className="w-full h-full absolute"></canvas>
       </div>
-      <table className="predictions-table" style={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'white', padding: '10px' }}>
+      <table className="absolute top-0 right-0 bg-white p-4 rounded shadow-md">
         <thead>
           <tr>
-            <th>User</th>
-            <th>Expression</th>
-            <th>Time</th>
+            <th className="px-2 py-1">User</th>
+            <th className="px-2 py-1">Expression</th>
+            <th className="px-2 py-1">Time</th>
           </tr>
         </thead>
         <tbody>
           {predictions.map((prediction, index) => (
-            <tr key={index}>
-              <td>{prediction.user}</td>
-              <td>{prediction.expression}</td>
-              <td>{prediction.time}</td>
+            <tr key={index} className={`${index % 2 === 0 ? 'bg-gray-100' : 'bg-white'} hover:bg-gray-200`}>
+              <td className="px-2 py-1">{prediction.user}</td>
+              <td className="px-2 py-1">{prediction.expression}</td>
+              <td className="px-2 py-1">{prediction.time}</td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
     </>
   );
 }
