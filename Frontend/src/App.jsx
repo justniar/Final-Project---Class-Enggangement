@@ -1,14 +1,21 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
+import axios from 'axios';
 
 const modelPath = '/models/'; // path to model folder that will be loaded using http
 const minScore = 0.2; // minimum score
 const maxResults = 5; // maximum number of results to return
 let optionsSSDMobileNet;
 
-const FaceDetection = () => {
+const App = () => {
+  const [predictedUser, setPredictedUser] = useState(null);
+  const [predictedExpression, setPredictedExpression] = useState(null);
+  const [predictions, setPredictions] = useState([]);
+  const [isWebcamActive, setIsWebcamActive] = useState(true);
+
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const lastPredictionRef = useRef(null);
 
   useEffect(() => {
     const loadModels = async () => {
@@ -30,7 +37,6 @@ const FaceDetection = () => {
 
     if (!video || !canvas) return;
 
-    // setup webcam. note that navigator.mediaDevices requires that page is accessed via https
     if (!navigator.mediaDevices) {
       console.error('Camera Error: access not supported');
       return null;
@@ -124,17 +130,96 @@ const FaceDetection = () => {
         ctx.arc(person.landmarks.positions[i].x, person.landmarks.positions[i].y, pointSize, 0, 2 * Math.PI);
         ctx.fill();
       }
+
+      // Predict user and expression
+      predictOnFrame(person.detection.box, canvas);
     }
   };
 
+  const predictOnFrame = async (detectionBox, canvas) => {
+    const { x, y, width, height } = detectionBox;
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempContext = tempCanvas.getContext('2d', { willReadFrequently: true });
+    tempContext.drawImage(videoRef.current, x, y, width, height, 0, 0, width, height);
+
+    tempCanvas.toBlob(async (blob) => {
+      const formData = new FormData();
+      formData.append('frame', blob, 'frame.jpg');
+
+      try {
+        const response = await axios.post('http://localhost:5000/predict', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        const { user_predicted_class, expression_predicted_class } = response.data;
+
+        if (expression_predicted_class !== lastPredictionRef.current) {
+          lastPredictionRef.current = expression_predicted_class;
+
+          const context = canvas.getContext('2d', { willReadFrequently: true });
+          context.fillStyle = 'blue';
+          context.fillRect(x, y - 50, width, 50);
+          context.font = '18px Arial';
+          context.fillStyle = 'white';
+          context.fillText(`User: ${user_predicted_class}`, x + 5, y - 30);
+          context.fillText(`Expression: ${expression_predicted_class}`, x + 5, y - 10);
+
+          setPredictions(prevPredictions => [...prevPredictions, { user: user_predicted_class, expression: expression_predicted_class, time: new Date().toLocaleTimeString() }]);
+        }
+      } catch (error) {
+        console.error("Error predicting frame:", error);
+      }
+    }, 'image/jpeg');
+  };
+
+  const clearPredictions = () => {
+    setPredictions([]);
+  };
+
+  const toggleWebcam = () => {
+    setIsWebcamActive(!isWebcamActive);
+  };
+
   return (
-    <div>
-      <div className="relative w-full">
-        <video ref={videoRef} className="absolute" autoPlay muted></video>
-        <canvas ref={canvasRef} className="absolute"></canvas>
+    <>
+      <div className="p-4 w-full h-screen flex flex-col">
+        <div className="flex space-x-2 mb-4">
+          <button onClick={toggleWebcam} className="bg-blue-500 text-white py-2 px-4 rounded">
+            {isWebcamActive ? 'Stop Webcam' : 'Start Webcam'}
+          </button>
+          <button onClick={clearPredictions} className="bg-red-500 text-white py-2 px-4 rounded">
+            Clear Predictions
+          </button>
+        </div>
+        <div className="relative w-full h-full">
+          {isWebcamActive && <video ref={videoRef} className="w-full h-full absolute" autoPlay muted></video>}
+          <canvas ref={canvasRef} className="w-full h-full absolute"></canvas>
+        </div>
+        <table className="top-0 right-0 bg-white p-2 m-4 w-1/3 absolute">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Expression</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {predictions.map((prediction, index) => (
+              <tr key={index}>
+                <td>{prediction.user}</td>
+                <td>{prediction.expression}</td>
+                <td>{prediction.time}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
+    </>
   );
 };
 
-export default FaceDetection;
+export default App;
