@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import * as tf from '@tensorflow/tfjs';
 import * as faceapi from 'face-api.js';
 import axios from 'axios';
 import Webcam from 'react-webcam';
@@ -11,14 +12,16 @@ const EngagementDetection = ({ setPredictions }) => {
   useEffect(() => {
     const loadModels = async () => {
       try {
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-          faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
-          faceapi.nets.faceExpressionNet.loadFromUri('/models')
-        ]);
-        console.log("Models loaded successfully");
-        startVideo();
+        tf.ready().then(async () => {
+          await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+            faceapi.nets.faceExpressionNet.loadFromUri('/models')
+          ]);
+          console.log("Models loaded successfully");
+          startVideo();
+        });
       } catch (error) {
         console.error("Error loading models:", error);
       }
@@ -43,16 +46,23 @@ const EngagementDetection = ({ setPredictions }) => {
     faceapi.matchDimensions(canvas, displaySize);
 
     const intervalId = setInterval(async () => {
-      const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions();
-      const resizedDetections = faceapi.resizeResults(detections, displaySize);
-      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-      faceapi.draw.drawDetections(canvas, resizedDetections);
-      faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+      if (canvasRef.current.getContext) {
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions();
+        const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        const context = canvas.getContext('2d');
+        if (context) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          faceapi.draw.drawDetections(canvas, resizedDetections);
+          faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+        }
 
-      if (resizedDetections.length > 0) {
-        predictOnFrame(resizedDetections[0], canvas);
+        if (resizedDetections.length > 0) {
+          predictOnFrame(resizedDetections[0], canvas);
+        }
       }
     }, 100);
+
+    return () => clearInterval(intervalId);
   };
 
   const predictOnFrame = async (detection, canvas) => {
@@ -80,12 +90,14 @@ const EngagementDetection = ({ setPredictions }) => {
           lastPredictionRef.current = expression_predicted_class;
 
           const context = canvas.getContext('2d', { willReadFrequently: true });
-          context.fillStyle = 'blue';
-          context.fillRect(x, y - 50, width, 50);
-          context.font = '18px Arial';
-          context.fillStyle = 'white';
-          context.fillText(`User: ${user_predicted_class}`, x + 5, y - 30);
-          context.fillText(`Expression: ${expression_predicted_class}`, x + 5, y - 10);
+          if (context) {
+            context.fillStyle = 'blue';
+            context.fillRect(x, y - 50, width, 50);
+            context.font = '18px Arial';
+            context.fillStyle = 'white';
+            context.fillText(`User: ${user_predicted_class}`, x + 5, y - 30);
+            context.fillText(`Expression: ${expression_predicted_class}`, x + 5, y - 10);
+          }
 
           setPredictions(prevPredictions => [...prevPredictions, { user: user_predicted_class, expression: expression_predicted_class, time: new Date().toLocaleTimeString() }]);
         }
