@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
 import axios from 'axios';
 
-const modelPath = '/models/'; // path to model folder that will be loaded using http
-const minScore = 0.2; // minimum score
-const maxResults = 5; // maximum number of results to return
+const modelPath = '/models/'; 
+const minScore = 0.2;
+const maxResults = 5;
 let optionsSSDMobileNet;
 
 const App = () => {
@@ -199,15 +199,15 @@ const App = () => {
           {isWebcamActive && <video ref={videoRef} className="w-full h-full absolute" autoPlay muted></video>}
           <canvas ref={canvasRef} className="w-full h-full absolute"></canvas>
         </div>
-        <table className="top-0 right-0 bg-white p-2 m-4 w-1/3 absolute">
+        <table className="top-0 right-0 bg-white p-2 m-4 w-full">
           <thead>
-            <tr>
+            <tr className='w-full'>
               <th>User</th>
               <th>Expression</th>
               <th>Time</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className='w-full'>
             {predictions.map((prediction, index) => (
               <tr key={index}>
                 <td>{prediction.user}</td>
