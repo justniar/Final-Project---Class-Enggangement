@@ -1,12 +1,15 @@
 'use client';
+import 'text-encoding-utf-8'; // Import the polyfill
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
-import axios from 'axios';
+// import '@vladmandic/face-api/dist/face-api.js'; // Ensure CommonJS fallback
+// import axios from 'axios';
 import { Grid, Box } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 // components
-import SalesOverview from '@/components/dashboard/SalesOverview';
-import RecentTransactions from '@/components/dashboard/RecentTransactions';
+// import SalesOverview from '@/components/dashboard/SalesOverview';
+// import RecentTransactions from '@/components/dashboard/RecentTransactions';
+import dynamic from 'next/dynamic';
 
 const modelPath = '/models/'; 
 const minScore = 0.2;
@@ -51,20 +54,29 @@ const Detection: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastPredictionRef = useRef<string | null>(null);
-
+  
+  // const loadFaceAPI = async () => {
+  //   const faceapi = await import('@vladmandic/face-api/dist/face-api.js');
+  //   // Example: Initialize face-api or use its functions
+  //   console.log('Face API loaded:', faceapi);
+  // };
   useEffect(() => {
     const loadModels = async () => {
+      const faceapi = await import('@vladmandic/face-api/dist/face-api.js');
       await faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
       await faceapi.nets.ageGenderNet.loadFromUri(modelPath);
       await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
       await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
       await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
+      console.log('Face API loaded:', faceapi);
+
       optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
       setupCamera();
     };
-
+  
     loadModels();
   }, []);
+  
 
   const setupCamera = async () => {
     const video = videoRef.current;
