@@ -1,8 +1,8 @@
 "use client";
 import { styled, Container, Box, IconButton } from "@mui/material";
 import React, { useState } from "react";
-import Header from "@/app/(DashboardLayout)/layout/header/Header";
-import Sidebar from "@/app/(DashboardLayout)/layout/sidebar/Sidebar";
+import Header from "@/components/layouts/header/Header";
+import Sidebar from "@/components/layouts/sidebar/Sidebar";
 import MenuIcon from '@mui/icons-material/Menu';
 
 const MainWrapper = styled("div")(() => ({
@@ -38,17 +38,13 @@ export default function RootLayout({
 
   return (
     <MainWrapper className="mainwrapper">
-      {/* Sidebar */}
       <Sidebar
         isSidebarOpen={isSidebarOpen}
         isMobileSidebarOpen={isMobileSidebarOpen}
         onSidebarClose={() => setMobileSidebarOpen(false)}
       />
-      {/* Main Wrapper */}
       <PageWrapper className="page-wrapper">
-        {/* Header */}
         <Header toggleMobileSidebar={() => setMobileSidebarOpen(true)} />
-        {/* Toggle Button for Desktop */}
         <IconButton
           onClick={toggleSidebar}
           sx={{
@@ -60,16 +56,13 @@ export default function RootLayout({
         >
           <MenuIcon />
         </IconButton>
-        {/* PageContent */}
         <Container
           sx={{
             paddingTop: "20px",
             maxWidth: "1200px",
           }}
         >
-          {/* Page Route */}
           <Box sx={{ minHeight: "calc(100vh - 170px)" }}>{children}</Box>
-          {/* End Page */}
         </Container>
       </PageWrapper>
     </MainWrapper>

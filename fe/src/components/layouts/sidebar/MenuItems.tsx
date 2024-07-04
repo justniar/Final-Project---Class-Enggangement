@@ -23,6 +23,12 @@ const Menuitems = [
     href: "/",
   },
   {
+    id: uniqueId(),
+    title: "Monitoring",
+    icon: IconLayoutDashboard,
+    href: "/",
+  },
+  {
     navlabel: true,
     subheader: "Utilities",
   },
