@@ -26,7 +26,7 @@ const Menuitems = [
     id: uniqueId(),
     title: "Monitoring",
     icon: IconLayoutDashboard,
-    href: "/",
+    href: "/detection",
   },
   {
     navlabel: true,
