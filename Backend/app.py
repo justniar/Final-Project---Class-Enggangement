@@ -17,10 +17,8 @@ class CustomSparseCategoricalCrossentropy(SparseCategoricalCrossentropy):
         super().__init__(from_logits=from_logits, reduction='none', name='custom_sparse_categorical_crossentropy')
 
 # Load your models here
-user_recognition_model_path = 'model/ClassEnggagementDetectionDrownsinessTune.h5'
 expression_recognition_model_path = 'model/ClassEnggagementDetectionDrownsinessTune.h5'
 
-user_recognition_model = load_model(user_recognition_model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
 expression_recognition_model = load_model(expression_recognition_model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
 
 # Database connection details
@@ -44,25 +42,24 @@ def predict():
         img = np.expand_dims(img, axis=0)
 
         # User recognition prediction
-        user_predictions = user_recognition_model.predict(img)
-        user_predicted_class = np.argmax(user_predictions)
+        # user_predictions = user_recognition_model.predict(img)
+        # user_predicted_class = np.argmax(user_predictions)
 
         # Expression recognition prediction
         expression_predictions = expression_recognition_model.predict(img)
         expression_predicted_class = np.argmax(expression_predictions)
 
         # Define class labels
-        user_class_labels = ['User1', 'User2', 'User3']
         expression_class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
 
-        user_predicted_class_label = user_class_labels[user_predicted_class]
+        # user_predicted_class_label = user_class_labels[user_predicted_class]
         expression_predicted_class_label = expression_class_labels[expression_predicted_class]
         
         # Map the predicted class label to "fokus" or "mengantuk"
-        if expression_predicted_class_label in ['Open', 'no_yawn']:
-            expression_predicted_class_label = 'fokus'
-        elif expression_predicted_class_label in ['Closed', 'yawn']:
-            expression_predicted_class_label = 'mengantuk'
+        # if expression_predicted_class_label in ['Open', 'no_yawn']:
+        #     expression_predicted_class_label = 'fokus'
+        # elif expression_predicted_class_label in ['Closed', 'yawn']:
+        #     expression_predicted_class_label = 'mengantuk'
 
         # save prediction to the database
         # nim = user_predicted_class_label
@@ -81,7 +78,7 @@ def predict():
         
         return jsonify({
             # 'user_predicted_class': user_predicted_class_label,
-            'user_predicted_class': 'salsa',
+            # 'user_predicted_class': 'salsa',
             'expression_predicted_class': expression_predicted_class_label
         })
     except Exception as e:
