@@ -157,77 +157,64 @@ const CaptureDataset: React.FC = () => {
             <TextField 
               label="Label" 
               variant="outlined" 
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
+              value={label} 
+              onChange={(e) => setLabel(e.target.value)} 
               fullWidth
             />
+            <TextField
+              label="User ID"
+              variant="outlined"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              fullWidth
+              sx={{ mt: 2 }}
+            />
+          </Grid>
+          <Grid item xs={12} lg={6}>
+            <Box display="flex" justifyContent="center" alignItems="center" position="relative">
+              <video ref={videoRef} style={{ width: '100%', maxHeight: '100%' }} autoPlay muted />
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
+            </Box>
+          </Grid>
+          <Grid item xs={12} lg={6}>
             <Button 
               variant="contained" 
-              color="primary" 
-              onClick={captureImage}
-              disabled={!label || isCapturing || captureCount === 10}
-              style={{ marginTop: '10px' }}
+              onClick={captureImage} 
+              fullWidth
+              disabled={isCapturing}
             >
-              Capture Image {captureCount + 1}/10
+              Capture Image
             </Button>
-            <Button 
-              variant="contained" 
-              color="primary" 
+            <Button
+              variant="contained"
               onClick={startCapturingAutomatically}
-              disabled={!label || isCapturing || captureCount === 10}
-              style={{ marginTop: '10px', marginLeft: '10px' }}
+              fullWidth
+              sx={{ mt: 2 }}
+              disabled={isCapturing}
             >
-              Capture Automatically
+              Start Automatic Capturing
             </Button>
-            <Button 
-              variant="contained" 
-              color="primary" 
+            <Button
+              variant="contained"
               onClick={toggleWebcam}
-              style={{ marginTop: '10px', marginLeft: '10px' }}
+              fullWidth
+              sx={{ mt: 2 }}
             >
               {isWebcamActive ? 'Turn Off Webcam' : 'Turn On Webcam'}
             </Button>
-            <Box
-              sx={{
-                position: 'relative',
-                overflow: 'hidden',
-                marginTop: '20px',
-                '& video': {
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                },
-                '& canvas': {
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                },
-              }}
-            >
-              <video ref={videoRef} />
-              <canvas ref={canvasRef} />
-            </Box>
           </Grid>
-          <Grid item xs={12} lg={12}>
-            <Typography variant="h6" style={{ marginTop: '20px' }}>Captured Images:</Typography>
-            <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Typography variant="h6" gutterBottom>
+              Captured Images:
+            </Typography>
+            <Grid container spacing={2}>
               {capturedImages.map((image, index) => (
-                <Grid item xs={12} sm={6} md={4} key={index}>
+                <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
                   <Card>
-                    <CardMedia
-                      component="img"
-                      height="140"
-                      image={image.src}
-                      alt={`Captured face ${index + 1}`}
-                    />
+                    <CardMedia component="img" height="140" image={image.src} alt={`Captured ${index + 1}`} />
                     <CardContent>
                       <Typography variant="body2" color="textSecondary" component="p">
-                        Label: {image.label}
+                        {image.label}
                       </Typography>
                     </CardContent>
                   </Card>

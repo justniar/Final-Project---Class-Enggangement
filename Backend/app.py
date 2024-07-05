@@ -19,7 +19,6 @@ class CustomSparseCategoricalCrossentropy(SparseCategoricalCrossentropy):
 
 # Load your models here
 expression_recognition_model_path = 'model/ClassEnggagementDetectionDrownsinessTune.h5'
-
 expression_recognition_model = load_model(expression_recognition_model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
 
 # Database connection details
@@ -50,27 +49,27 @@ def predict():
         expression_class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
         expression_predicted_class_label = expression_class_labels[expression_predicted_class]
 
-        # save prediction to the database
+        # Save prediction to the database
         nim = 200511152
 
-        if nim: 
+        if nim:
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute(
-                    "INSERT INTO detections (nim, expression) VALUES (%s, %s)",
-                    (nim, expression_predicted_class_label)
-                )
+                "INSERT INTO detections (nim, expression) VALUES (%s, %s)",
+                (nim, expression_predicted_class_label)
+            )
             conn.commit()
             cur.close()
             conn.close()
-        
+
         return jsonify({
             'expression_predicted_class': expression_predicted_class_label
         })
     except Exception as e:
         logging.error(f"Error processing prediction: {str(e)}")
         return jsonify({'error': str(e)}), 500
-    
+
 @app.route('/capture', methods=['POST'])
 def capture_image():
     try:
@@ -102,7 +101,7 @@ def capture_image():
     except Exception as e:
         logging.error(f"Error capturing image: {e}")
         return jsonify({'message': 'Failed to capture image'}), 500
-    
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(debug=True)
