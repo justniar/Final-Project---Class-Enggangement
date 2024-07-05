@@ -28,54 +28,54 @@ const Menuitems = [
     icon: IconLayoutDashboard,
     href: "/detection",
   },
-  {
-    navlabel: true,
-    subheader: "Utilities",
-  },
-  {
-    id: uniqueId(),
-    title: "Typography",
-    icon: IconTypography,
-    href: "/utilities/typography",
-  },
-  {
-    id: uniqueId(),
-    title: "Shadow",
-    icon: IconCopy,
-    href: "/utilities/shadow",
-  },
+  // {
+  //   navlabel: true,
+  //   subheader: "Utilities",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Typography",
+  //   icon: IconTypography,
+  //   href: "/utilities/typography",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Shadow",
+  //   icon: IconCopy,
+  //   href: "/utilities/shadow",
+  // },
   {
     navlabel: true,
     subheader: "Auth",
   },
   {
     id: uniqueId(),
-    title: "Login",
+    title: "Logout",
     icon: IconLogin,
     href: "/authentication/login",
   },
-  {
-    id: uniqueId(),
-    title: "Register",
-    icon: IconUserPlus,
-    href: "/authentication/register",
-  },
-  {
-    navlabel: true,
-    subheader: "Extra",
-  },
-  {
-    id: uniqueId(),
-    title: "Icons",
-    icon: IconMoodHappy,
-    href: "/icons",
-  },
-  {
-    id: uniqueId(),
-    title: "Sample Page",
-    icon: IconAperture,
-    href: "/sample-page",
-  },
+  // {
+  //   id: uniqueId(),
+  //   title: "Register",
+  //   icon: IconUserPlus,
+  //   href: "/authentication/register",
+  // },
+  // {
+  //   navlabel: true,
+  //   subheader: "Extra",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Icons",
+  //   icon: IconMoodHappy,
+  //   href: "/icons",
+  // },
+  // {
+  //   id: uniqueId(),
+  //   title: "Sample Page",
+  //   icon: IconAperture,
+  //   href: "/sample-page",
+  // },
 ];
 
 export default Menuitems;
