@@ -1,6 +1,7 @@
 import os
 import io
 import numpy as np
+import base64
 from PIL import Image
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -41,28 +42,15 @@ def predict():
         img = img / 255.0  # Normalize
         img = np.expand_dims(img, axis=0)
 
-        # User recognition prediction
-        # user_predictions = user_recognition_model.predict(img)
-        # user_predicted_class = np.argmax(user_predictions)
-
         # Expression recognition prediction
         expression_predictions = expression_recognition_model.predict(img)
         expression_predicted_class = np.argmax(expression_predictions)
 
         # Define class labels
         expression_class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
-
-        # user_predicted_class_label = user_class_labels[user_predicted_class]
         expression_predicted_class_label = expression_class_labels[expression_predicted_class]
-        
-        # Map the predicted class label to "fokus" or "mengantuk"
-        # if expression_predicted_class_label in ['Open', 'no_yawn']:
-        #     expression_predicted_class_label = 'fokus'
-        # elif expression_predicted_class_label in ['Closed', 'yawn']:
-        #     expression_predicted_class_label = 'mengantuk'
 
         # save prediction to the database
-        # nim = user_predicted_class_label
         nim = 200511152
 
         if nim: 
@@ -77,8 +65,6 @@ def predict():
             conn.close()
         
         return jsonify({
-            # 'user_predicted_class': user_predicted_class_label,
-            # 'user_predicted_class': 'salsa',
             'expression_predicted_class': expression_predicted_class_label
         })
     except Exception as e:
@@ -88,42 +74,34 @@ def predict():
 @app.route('/capture', methods=['POST'])
 def capture_image():
     try:
-        cam = cv2.VideoCapture(0)
-        cam.set(3, 640)
-        cam.set(4, 480)
+        data = request.get_json()
+        user_id = data.get('userId')
+        image_data = data.get('image')
 
-        face_detector = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+        # Convert image data from base64
+        image = Image.open(io.BytesIO(base64.b64decode(image_data.split(',')[1])))
 
-        # Receive user ID from request body
-        face_id = request.json['userId']
+        # Save the image to a file
+        image_save_path = f'./captured_images/{user_id}'
+        os.makedirs(image_save_path, exist_ok=True)
+        image_filename = f'{user_id}.png'
+        image.save(os.path.join(image_save_path, image_filename))
 
-        print("\n [INFO] Camera is analyzing your face. Please look at the camera and wait!")
+        # Save the image info to the captures table
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO captures (label, src) VALUES (%s, %s)",
+            (user_id, os.path.join(image_save_path, image_filename))
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
 
-        count = 0
-        while True:
-            ret, img = cam.read()
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            faces = face_detector.detectMultiScale(gray, 1.3, 5)
-
-            for (x, y, w, h) in faces:
-                cv2.rectangle(img, (x,y), (x+w, y+h), (255, 0, 0), 2)
-                count += 1
-
-                cv2.imwrite(f"dataset/User.{face_id}.{count}.jpg", gray[y:y+h, x:x+w])
-                cv2.imshow('image', img)
-
-            k = cv2.waitKey(100) & 0xff
-            if k == 27 or count >= 30:
-                break
-
-        print("[INFO] Analysis complete. Your face has been captured as a dataset.")
-        cam.release()
-        cv2.destroyAllWindows()
-
-        return jsonify({'message': 'Image capture successful'}), 200
-
+        return jsonify({'message': 'Image captured and saved successfully'})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logging.error(f"Error capturing image: {e}")
+        return jsonify({'message': 'Failed to capture image'}), 500
     
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)

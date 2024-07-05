@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
 import { Button, Box, Grid, TextField, Typography, Card, CardContent, CardMedia } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
+import axios from 'axios';
 
 const modelPath = '/models/';
 
@@ -18,6 +19,7 @@ const CaptureDataset: React.FC = () => {
   const [isWebcamActive, setIsWebcamActive] = useState<boolean>(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [captureCount, setCaptureCount] = useState<number>(0);
+  const [userId, setUserId] = useState<string>('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -79,7 +81,7 @@ const CaptureDataset: React.FC = () => {
 
   const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current || !label || isCapturing) return;
-
+    
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -95,7 +97,14 @@ const CaptureDataset: React.FC = () => {
     setCaptureCount((prevCount) => prevCount + 1);
     console.log('Face captured and labeled:', label);
 
-    if (captureCount === 29) {
+    try {
+      const response = await axios.post('http://localhost:5000/capture', { userId, image: capturedImageSrc });
+      console.log(response.data.message);
+    } catch (error) {
+        console.error('Error capturing image:', error);
+    }
+
+    if (captureCount === 9) {
       stopCapturing();
     }
   };
@@ -109,7 +118,7 @@ const CaptureDataset: React.FC = () => {
     const delay = 2000; // Adjust delay time in milliseconds
     const interval = setInterval(() => {
       captureImage();
-      if (captureCount === 29) {
+      if (captureCount === 9) {
         clearInterval(interval);
         stopCapturing();
       }
@@ -156,16 +165,16 @@ const CaptureDataset: React.FC = () => {
               variant="contained" 
               color="primary" 
               onClick={captureImage}
-              disabled={!label || isCapturing || captureCount === 30}
+              disabled={!label || isCapturing || captureCount === 10}
               style={{ marginTop: '10px' }}
             >
-              Capture Image {captureCount + 1}/30
+              Capture Image {captureCount + 1}/10
             </Button>
             <Button 
               variant="contained" 
               color="primary" 
               onClick={startCapturingAutomatically}
-              disabled={!label || isCapturing || captureCount === 30}
+              disabled={!label || isCapturing || captureCount === 10}
               style={{ marginTop: '10px', marginLeft: '10px' }}
             >
               Capture Automatically
