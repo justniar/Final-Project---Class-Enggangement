@@ -37,6 +37,11 @@ interface FaceApiResult {
   };
 }
 
+interface CapturedImage {
+  src: string;
+  label: string;
+}
+
 let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 
 const Detection: React.FC = () => {
@@ -136,7 +141,7 @@ const Detection: React.FC = () => {
       }));
 
       const fps = 1000 / (performance.now() - t0);
-      drawFaces(canvas, faceApiResults, fps.toLocaleString());
+      drawFaces(canvas, faceApiResults, fps.toLocaleString(), []); // Pass an empty array for capturedImages for now
       requestAnimationFrame(() => detectVideo(video, canvas));
     } catch (err) {
       console.error(`Detect Error: ${JSON.stringify(err)}`);
@@ -144,14 +149,25 @@ const Detection: React.FC = () => {
     return false;
   };
 
-  const drawFaces = (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string) => {
+  const drawFaces = (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string, capturedImages: CapturedImage[]) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = 'small-caps 20px "Segoe UI"';
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
-
+  
+    // Draw captured images and labels
+    for (const { src, label } of capturedImages) {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+        ctx.fillText(`Label: ${label}`, 10, 50);
+      };
+    }
+  
+    // Draw detected faces
     for (const person of data) {
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'deepskyblue';
@@ -161,7 +177,7 @@ const Detection: React.FC = () => {
       ctx.rect(person.detection.box.x, person.detection.box.y, person.detection.box.width, person.detection.box.height);
       ctx.stroke();
       ctx.globalAlpha = 1;
-
+  
       const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
       ctx.fillStyle = 'black';
       ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 59);
@@ -175,6 +191,7 @@ const Detection: React.FC = () => {
       ctx.fillText(`roll:${person.angle.roll}° pitch:${person.angle.pitch}° yaw:${person.angle.yaw}°`, person.detection.box.x, person.detection.box.y - 5);
     }
   };
+  
 
   const toggleWebcam = () => {
     if (isWebcamActive) {

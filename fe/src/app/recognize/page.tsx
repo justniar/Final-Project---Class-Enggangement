@@ -1,24 +1,23 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
-import { Button, Box, Grid, TextField } from '@mui/material';
+import { Button, Box, Grid, TextField, Typography, Card, CardContent, CardMedia } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 
 const modelPath = '/models/';
 
-interface DetectionBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+interface CapturedImage {
+  src: string;
+  label: string;
 }
 
 const CaptureDataset: React.FC = () => {
   const [label, setLabel] = useState<string>('');
-  const [dataset, setDataset] = useState<faceapi.LabeledFaceDescriptors[]>([]);
+  const [capturedImages, setCapturedImages] = useState<CapturedImage[]>([]);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [isWebcamActive, setIsWebcamActive] = useState<boolean>(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [captureCount, setCaptureCount] = useState<number>(0);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -79,8 +78,8 @@ const CaptureDataset: React.FC = () => {
   };
 
   const captureImage = async () => {
-    if (!videoRef.current || !canvasRef.current || !label) return;
-    
+    if (!videoRef.current || !canvasRef.current || !label || isCapturing) return;
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -89,16 +88,32 @@ const CaptureDataset: React.FC = () => {
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const detections = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
-    
-    if (!detections) {
-      console.error('No face detected');
-      return;
-    }
+    const capturedImageSrc = canvas.toDataURL('image/png');
+    const newCapturedImage: CapturedImage = { src: capturedImageSrc, label };
+    setCapturedImages((prevImages) => [...prevImages, newCapturedImage]);
 
-    const newLabeledFaceDescriptors = new faceapi.LabeledFaceDescriptors(label, [detections.descriptor]);
-    setDataset((prevDataset) => [...prevDataset, newLabeledFaceDescriptors]);
+    setCaptureCount((prevCount) => prevCount + 1);
     console.log('Face captured and labeled:', label);
+
+    if (captureCount === 29) {
+      stopCapturing();
+    }
+  };
+
+  const startCapturingAutomatically = () => {
+    setIsCapturing(true);
+    captureAutomatically();
+  };
+
+  const captureAutomatically = () => {
+    const delay = 2000; // Adjust delay time in milliseconds
+    const interval = setInterval(() => {
+      captureImage();
+      if (captureCount === 29) {
+        clearInterval(interval);
+        stopCapturing();
+      }
+    }, delay);
   };
 
   const toggleWebcam = () => {
@@ -120,6 +135,11 @@ const CaptureDataset: React.FC = () => {
     }
   };
 
+  const stopCapturing = () => {
+    setIsCapturing(false);
+    stopWebcam();
+  };
+
   return (
     <PageContainer title="Capture Dataset" description="Capture images for dataset">
       <Box>
@@ -136,10 +156,19 @@ const CaptureDataset: React.FC = () => {
               variant="contained" 
               color="primary" 
               onClick={captureImage}
-              disabled={!label || isCapturing}
+              disabled={!label || isCapturing || captureCount === 30}
               style={{ marginTop: '10px' }}
             >
-              Capture Image
+              Capture Image {captureCount + 1}/30
+            </Button>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={startCapturingAutomatically}
+              disabled={!label || isCapturing || captureCount === 30}
+              style={{ marginTop: '10px', marginLeft: '10px' }}
+            >
+              Capture Automatically
             </Button>
             <Button 
               variant="contained" 
@@ -174,6 +203,28 @@ const CaptureDataset: React.FC = () => {
               <video ref={videoRef} />
               <canvas ref={canvasRef} />
             </Box>
+          </Grid>
+          <Grid item xs={12} lg={12}>
+            <Typography variant="h6" style={{ marginTop: '20px' }}>Captured Images:</Typography>
+            <Grid container spacing={3}>
+              {capturedImages.map((image, index) => (
+                <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Card>
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image={image.src}
+                      alt={`Captured face ${index + 1}`}
+                    />
+                    <CardContent>
+                      <Typography variant="body2" color="textSecondary" component="p">
+                        Label: {image.label}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
           </Grid>
         </Grid>
       </Box>
