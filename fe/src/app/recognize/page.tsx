@@ -1,13 +1,10 @@
 'use client';
-import { TextEncoder, TextDecoder } from 'text-encoding';
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
-import { Grid, Box } from '@mui/material';
+import { Button, Box, Grid, TextField } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 
 const modelPath = '/models/';
-const minScore = 0.2;
-const maxResults = 5;
 
 interface DetectionBox {
   x: number;
@@ -16,48 +13,22 @@ interface DetectionBox {
   height: number;
 }
 
-interface Prediction {
-  user: string;
-  expression: string;
-  time: string;
-}
-
-interface FaceApiResult {
-  detection: faceapi.FaceDetection;
-  expressions: { [key: string]: number };
-  age: number;
-  gender: string;
-  genderProbability: number;
-  landmarks: faceapi.FaceLandmarks68;
-  angle: {
-    roll: number;
-    pitch: number;
-    yaw: number;
-  };
-}
-
-let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
-
-const Detection: React.FC = () => {
-  const [predictedUser, setPredictedUser] = useState<string | null>(null);
-  const [predictedExpression, setPredictedExpression] = useState<string | null>(null);
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [isWebcamActive, setIsWebcamActive] = useState(true);
+const CaptureDataset: React.FC = () => {
+  const [label, setLabel] = useState<string>('');
+  const [dataset, setDataset] = useState<faceapi.LabeledFaceDescriptors[]>([]);
+  const [isCapturing, setIsCapturing] = useState<boolean>(false);
+  const [isWebcamActive, setIsWebcamActive] = useState<boolean>(true);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const lastPredictionRef = useRef<string | null>(null);
 
   useEffect(() => {
     const loadModels = async () => {
-      await faceapi.nets.ssdMobilenetv1.loadFromUri('./models');
-      await faceapi.nets.ageGenderNet.loadFromUri('./models');
-      await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
-      await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
-      await faceapi.nets.faceExpressionNet.loadFromUri('./models');
+      await faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
+      await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
+      await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
       console.log('Face API models loaded');
-
-      optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
       setupCamera();
     };
 
@@ -93,97 +64,98 @@ const Detection: React.FC = () => {
     }
 
     if (stream) {
+      setStream(stream);
       video.srcObject = stream;
     } else {
       console.error('Camera Error: stream empty');
       return null;
     }
 
-    video.onloadeddata = async () => {
+    video.onloadeddata = () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       video.play();
-      detectVideo(video, canvas);
     };
   };
 
-  const detectVideo = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
-    if (!video || video.paused) return false;
+  const captureImage = async () => {
+    if (!videoRef.current || !canvasRef.current || !label) return;
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
 
-    const t0 = performance.now();
-    try {
-      const result = await faceapi
-        .detectAllFaces(video, optionsSSDMobileNet)
-        .withFaceLandmarks()
-        .withFaceExpressions()
-        .withAgeAndGender();
+    if (!ctx) return;
 
-      const faceApiResults: FaceApiResult[] = result.map((res) => ({
-        detection: res.detection,
-        expressions: res.expressions as unknown as { [key: string]: number },
-        age: res.age,
-        gender: res.gender,
-        genderProbability: res.genderProbability,
-        landmarks: res.landmarks,
-        angle: {
-          roll: res.angle.roll ?? 0,
-          pitch: res.angle.pitch ?? 0,
-          yaw: res.angle.yaw ?? 0,
-        },
-      }));
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const fps = 1000 / (performance.now() - t0);
-      drawFaces(canvas, faceApiResults, fps.toLocaleString());
-      requestAnimationFrame(() => detectVideo(video, canvas));
-    } catch (err) {
-      console.error(`Detect Error: ${JSON.stringify(err)}`);
+    const detections = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+    
+    if (!detections) {
+      console.error('No face detected');
+      return;
     }
-    return false;
+
+    const newLabeledFaceDescriptors = new faceapi.LabeledFaceDescriptors(label, [detections.descriptor]);
+    setDataset((prevDataset) => [...prevDataset, newLabeledFaceDescriptors]);
+    console.log('Face captured and labeled:', label);
   };
 
-  const drawFaces = (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string) => {
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'small-caps 20px "Segoe UI"';
-    ctx.fillStyle = 'white';
-    ctx.fillText(`FPS: ${fps}`, 10, 25);
+  const toggleWebcam = () => {
+    if (isWebcamActive) {
+      stopWebcam();
+    } else {
+      setupCamera();
+    }
+    setIsWebcamActive(!isWebcamActive);
+  };
 
-    for (const person of data) {
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'deepskyblue';
-      ctx.fillStyle = 'deepskyblue';
-      ctx.globalAlpha = 0.6;
-      ctx.beginPath();
-      ctx.rect(person.detection.box.x, person.detection.box.y, person.detection.box.width, person.detection.box.height);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-
-      const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
-      ctx.fillStyle = 'black';
-      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 59);
-      ctx.fillText(`expression: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 41);
-      ctx.fillText(`age: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y - 23);
-      ctx.fillText(`roll:${person.angle.roll}° pitch:${person.angle.pitch}° yaw:${person.angle.yaw}°`, person.detection.box.x, person.detection.box.y - 5);
-      ctx.fillStyle = 'lightblue';
-      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 59);
-      ctx.fillText(`expression: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 41);
-      ctx.fillText(`age: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y - 23);
-      ctx.fillText(`roll:${person.angle.roll}° pitch:${person.angle.pitch}° yaw:${person.angle.yaw}°`, person.detection.box.x, person.detection.box.y - 5);
+  const stopWebcam = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
     }
   };
 
   return (
-    <PageContainer title="Detection" description="this is Detection page">
+    <PageContainer title="Capture Dataset" description="Capture images for dataset">
       <Box>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={12}>
+            <TextField 
+              label="Label" 
+              variant="outlined" 
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              fullWidth
+            />
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={captureImage}
+              disabled={!label || isCapturing}
+              style={{ marginTop: '10px' }}
+            >
+              Capture Image
+            </Button>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={toggleWebcam}
+              style={{ marginTop: '10px', marginLeft: '10px' }}
+            >
+              {isWebcamActive ? 'Turn Off Webcam' : 'Turn On Webcam'}
+            </Button>
             <Box
               sx={{
                 position: 'relative',
                 overflow: 'hidden',
+                marginTop: '20px',
                 '& video': {
-                  position: '',
+                  position: 'absolute',
                   top: 0,
                   left: 0,
                   width: '100%',
@@ -209,4 +181,4 @@ const Detection: React.FC = () => {
   );
 };
 
-export default Detection;
+export default CaptureDataset;

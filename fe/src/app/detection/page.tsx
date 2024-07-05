@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
 import { Grid, Box, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
+import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
 
 const modelPath = '/models/';
 const minScore = 0.2;
@@ -228,6 +229,7 @@ const Detection: React.FC = () => {
             </Box>
           </Grid>
         </Grid>
+        <StudentEnggagement/>
       </Box>
     </PageContainer>
   );
