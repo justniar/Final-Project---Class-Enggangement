@@ -1,17 +1,11 @@
 'use client';
-import 'text-encoding-utf-8'; // Import the polyfill
+import { TextEncoder, TextDecoder } from 'text-encoding';
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
-// import '@vladmandic/face-api/dist/face-api.js'; // Ensure CommonJS fallback
-// import axios from 'axios';
 import { Grid, Box } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
-// components
-// import SalesOverview from '@/components/dashboard/SalesOverview';
-// import RecentTransactions from '@/components/dashboard/RecentTransactions';
-import dynamic from 'next/dynamic';
 
-const modelPath = '/models/'; 
+const modelPath = '/models/';
 const minScore = 0.2;
 const maxResults = 5;
 
@@ -42,7 +36,6 @@ interface FaceApiResult {
   };
 }
 
-
 let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 
 const Detection: React.FC = () => {
@@ -54,29 +47,22 @@ const Detection: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastPredictionRef = useRef<string | null>(null);
-  
-  // const loadFaceAPI = async () => {
-  //   const faceapi = await import('@vladmandic/face-api/dist/face-api.js');
-  //   // Example: Initialize face-api or use its functions
-  //   console.log('Face API loaded:', faceapi);
-  // };
+
   useEffect(() => {
     const loadModels = async () => {
-      const faceapi = await import('@vladmandic/face-api/dist/face-api.js');
-      await faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
-      await faceapi.nets.ageGenderNet.loadFromUri(modelPath);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
-      await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
-      console.log('Face API loaded:', faceapi);
+      await faceapi.nets.ssdMobilenetv1.loadFromUri('./models/');
+      await faceapi.nets.ageGenderNet.loadFromUri('./models/');
+      await faceapi.nets.faceLandmark68Net.loadFromUri('./models/');
+      await faceapi.nets.faceRecognitionNet.loadFromUri('./models/');
+      await faceapi.nets.faceExpressionNet.loadFromUri('./models/');
+      console.log('Face API models loaded');
 
       optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
       setupCamera();
     };
-  
+
     loadModels();
   }, []);
-  
 
   const setupCamera = async () => {
     const video = videoRef.current;
@@ -90,13 +76,13 @@ const Detection: React.FC = () => {
     }
 
     let stream;
-    const constraints: MediaStreamConstraints = { 
-      audio: false, 
-      video: { 
-        facingMode: 'user', 
+    const constraints: MediaStreamConstraints = {
+      audio: false,
+      video: {
+        facingMode: 'user',
         width: window.innerWidth > window.innerHeight ? { ideal: window.innerWidth } : undefined,
         height: window.innerWidth <= window.innerHeight ? { ideal: window.innerHeight } : undefined
-      } 
+      }
     };
 
     try {
@@ -123,7 +109,7 @@ const Detection: React.FC = () => {
 
   const detectVideo = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
     if (!video || video.paused) return false;
-  
+
     const t0 = performance.now();
     try {
       const result = await faceapi
@@ -131,7 +117,7 @@ const Detection: React.FC = () => {
         .withFaceLandmarks()
         .withFaceExpressions()
         .withAgeAndGender();
-      
+
       const faceApiResults: FaceApiResult[] = result.map((res) => ({
         detection: res.detection,
         expressions: res.expressions as unknown as { [key: string]: number },
@@ -145,7 +131,7 @@ const Detection: React.FC = () => {
           yaw: res.angle.yaw ?? 0,
         },
       }));
-  
+
       const fps = 1000 / (performance.now() - t0);
       drawFaces(canvas, faceApiResults, fps.toLocaleString());
       requestAnimationFrame(() => detectVideo(video, canvas));
@@ -154,8 +140,6 @@ const Detection: React.FC = () => {
     }
     return false;
   };
-  
-  
 
   const drawFaces = (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });

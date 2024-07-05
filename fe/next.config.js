@@ -1,14 +1,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  webpack: (config, { isServer }) => {
-        if (!isServer) {
-          config.resolve.alias['@vladmandic/face-api'] = '@vladmandic/face-api/dist/face-api.js';
-        }
-        return config;
-      },
+  // webpack: (config, { isServer }) => {
+  //       if (!isServer) {
+  //         config.resolve.alias['@vladmandic/face-api'] = '@vladmandic/face-api/dist/face-api.js';
+  //       }
+  //       return config;
+  //     },
+  module: {
+    rules: [
+      { test: /face-api.esm.js/, type: 'javascript/esm' },
+    ],
+  },
   reactStrictMode: true,
 };
 
+// module.exports = {
+//   module: {
+//     rules: [
+//       { test: /face-api.esm.js/, type: 'javascript/esm' },
+//     ],
+//   },
+// }
 module.exports = nextConfig;
 
 // /** @type {import('next').NextConfig} */
