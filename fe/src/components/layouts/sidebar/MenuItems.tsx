@@ -28,6 +28,12 @@ const Menuitems = [
     icon: IconLayoutDashboard,
     href: "/detection",
   },
+  {
+    id: uniqueId(),
+    title: "Ambil Dataset Wajah",
+    icon: IconLayoutDashboard,
+    href: "/recognize",
+  },
   // {
   //   navlabel: true,
   //   subheader: "Utilities",

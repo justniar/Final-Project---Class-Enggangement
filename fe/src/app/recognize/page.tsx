@@ -2,7 +2,7 @@
 import { TextEncoder, TextDecoder } from 'text-encoding';
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
-import { Grid, Box, Button } from '@mui/material';
+import { Grid, Box } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 
 const modelPath = '/models/';
@@ -43,7 +43,6 @@ const Detection: React.FC = () => {
   const [predictedExpression, setPredictedExpression] = useState<string | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isWebcamActive, setIsWebcamActive] = useState(true);
-  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -94,7 +93,6 @@ const Detection: React.FC = () => {
     }
 
     if (stream) {
-      setStream(stream);
       video.srcObject = stream;
     } else {
       console.error('Camera Error: stream empty');
@@ -175,33 +173,11 @@ const Detection: React.FC = () => {
     }
   };
 
-  const toggleWebcam = () => {
-    if (isWebcamActive) {
-      stopWebcam();
-    } else {
-      setupCamera();
-    }
-    setIsWebcamActive(!isWebcamActive);
-  };
-
-  const stopWebcam = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-    }
-  };
-
   return (
     <PageContainer title="Detection" description="this is Detection page">
       <Box>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={12}>
-            <Button variant="contained" color="primary" onClick={toggleWebcam}>
-              {isWebcamActive ? 'Turn Off Webcam' : 'Turn On Webcam'}
-            </Button>
             <Box
               sx={{
                 position: 'relative',
