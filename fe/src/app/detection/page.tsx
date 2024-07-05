@@ -50,11 +50,11 @@ const Detection: React.FC = () => {
 
   useEffect(() => {
     const loadModels = async () => {
-      await faceapi.nets.ssdMobilenetv1.loadFromUri('./models/');
-      await faceapi.nets.ageGenderNet.loadFromUri('./models/');
-      await faceapi.nets.faceLandmark68Net.loadFromUri('./models/');
-      await faceapi.nets.faceRecognitionNet.loadFromUri('./models/');
-      await faceapi.nets.faceExpressionNet.loadFromUri('./models/');
+      await faceapi.nets.ssdMobilenetv1.loadFromUri('./models');
+      await faceapi.nets.ageGenderNet.loadFromUri('./models');
+      await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
+      await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
+      await faceapi.nets.faceExpressionNet.loadFromUri('./models');
       console.log('Face API models loaded');
 
       optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
@@ -183,7 +183,7 @@ const Detection: React.FC = () => {
                 position: 'relative',
                 overflow: 'hidden',
                 '& video': {
-                  position: 'absolute',
+                  position: '',
                   top: 0,
                   left: 0,
                   width: '100%',
