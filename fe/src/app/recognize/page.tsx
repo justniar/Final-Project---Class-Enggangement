@@ -118,11 +118,15 @@ const CaptureDataset: React.FC = () => {
   const captureAutomatically = () => {
     const delay = 2000; // Adjust delay time in milliseconds
     const interval = setInterval(() => {
-      captureImage();
-      if (captureCount >= 20) {
-        clearInterval(interval);
-        stopCapturing();
-      }
+      setCaptureCount((prevCount) => {
+        if (prevCount < 20) {
+          captureImage();
+        } else {
+          clearInterval(interval);
+          stopCapturing();
+        }
+        return prevCount;
+      });
     }, delay);
   };
 
