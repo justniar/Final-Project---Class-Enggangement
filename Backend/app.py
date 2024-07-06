@@ -9,6 +9,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.losses import SparseCategoricalCrossentropy
 import psycopg2
 import logging
+import cv2 
 
 app = Flask(__name__)
 CORS(app)
@@ -121,34 +122,57 @@ def start_training():
     try:
         path = 'captured_images'
         recognizer = cv2.face.LBPHFaceRecognizer_create()
-        detector = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+        detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
         def get_image_and_labels(path):
-            image_paths = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.png')]
+            image_paths = []
+            for user_id in os.listdir(path):
+                user_dir = os.path.join(path, user_id)
+                if os.path.isdir(user_dir):
+                    for filename in os.listdir(user_dir):
+                        if filename.endswith('.png'):
+                            image_paths.append(os.path.join(user_dir, filename))
+
             face_samples = []
             ids = []
 
+            if len(image_paths) == 0:
+                raise ValueError("No images found in the directory. Ensure images are placed in the 'captured_images' directory.")
+
             for image_path in image_paths:
-                PIL_img = Image.open(image_path).convert('L')
-                img_numpy = np.array(PIL_img, 'uint8')
+                print(f"Processing image: {image_path}")
+                try:
+                    PIL_img = Image.open(image_path).convert('L')
+                    img_numpy = np.array(PIL_img, 'uint8')
+                    print(f"Image shape: {img_numpy.shape}")
 
-                id = int(os.path.split(image_path)[-1].split(".")[0])
-                faces = detector.detectMultiScale(img_numpy)
+                    id = int(os.path.split(image_path)[-1].split(".")[0])
+                    faces = detector.detectMultiScale(img_numpy, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
-                for (x, y, w, h) in faces:
-                    face_samples.append(img_numpy[y:y+h, x:x+w])
-                    ids.append(id)
+                    if len(faces) == 0:
+                        print(f"No faces detected in image: {image_path}")
+                    else:
+                        for (x, y, w, h) in faces:
+                            face_samples.append(img_numpy[y:y+h, x+x+w])
+                            ids.append(id)
+                            print(f"Detected face in image: {image_path}, ID: {id}")
+
+                except Exception as e:
+                    print(f"Error processing image {image_path}: {e}")
 
             return face_samples, ids
 
         faces, ids = get_image_and_labels(path)
+        if len(faces) == 0 or len(ids) == 0:
+            raise ValueError("No faces or IDs detected. Ensure you have properly labeled images with faces.")
+
         recognizer.train(faces, np.array(ids))
         recognizer.write('trainer/trainer.yml')
 
         return jsonify({'message': 'Training completed successfully', 'total_ids': len(np.unique(ids))})
     except Exception as e:
         logging.error(f"Error during training: {str(e)}")
-        return jsonify({'message': 'Failed to complete training'}), 500
+        return jsonify({'message': 'Failed to complete training', 'error': str(e)}), 500
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
