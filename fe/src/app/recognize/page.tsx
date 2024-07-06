@@ -13,7 +13,6 @@ interface CapturedImage {
 }
 
 const CaptureDataset: React.FC = () => {
-  // const [label, setLabel] = useState<string>('');
   const [capturedImages, setCapturedImages] = useState<CapturedImage[]>([]);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [isWebcamActive, setIsWebcamActive] = useState<boolean>(true);
@@ -97,11 +96,13 @@ const CaptureDataset: React.FC = () => {
     setCaptureCount((prevCount) => prevCount + 1);
     console.log('Face captured and labeled:', userId);
 
-    try {
-      const response = await axios.post('http://localhost:5000/capture', { userId, image: capturedImageSrc });
-      console.log(response.data.message);
-    } catch (error) {
-      console.error('Error capturing image:', error);
+    if (captureCount + 1 < 20) {
+      try {
+        const response = await axios.post('http://localhost:5000/capture', { userId, image: capturedImageSrc });
+        console.log(response.data.message);
+      } catch (error) {
+        console.error('Error capturing image:', error);
+      }
     }
 
     if (captureCount + 1 === 20) {
@@ -149,9 +150,14 @@ const CaptureDataset: React.FC = () => {
     stopWebcam();
   };
 
-  const startTraining = () => {
-    
-  }
+  const startTraining = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/start-training');
+      console.log(response.data.message);
+    } catch (error) {
+      console.error('Error starting training:', error);
+    }
+  };
 
   return (
     <PageContainer title="Capture Dataset" description="Capture images for dataset">
@@ -196,7 +202,6 @@ const CaptureDataset: React.FC = () => {
               onClick={startTraining}
               fullWidth
               sx={{ mt: 2 }}
-              disabled={isCapturing}
             >
               Start Training Image
             </Button>

@@ -114,6 +114,41 @@ def capture_image():
     except Exception as e:
         logging.error(f"Error capturing image: {e}")
         return jsonify({'message': 'Failed to capture image'}), 500
+    
+
+@app.route('/start-training', methods=['POST'])
+def start_training():
+    try:
+        path = 'captured_images'
+        recognizer = cv2.face.LBPHFaceRecognizer_create()
+        detector = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+
+        def get_image_and_labels(path):
+            image_paths = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.png')]
+            face_samples = []
+            ids = []
+
+            for image_path in image_paths:
+                PIL_img = Image.open(image_path).convert('L')
+                img_numpy = np.array(PIL_img, 'uint8')
+
+                id = int(os.path.split(image_path)[-1].split(".")[0])
+                faces = detector.detectMultiScale(img_numpy)
+
+                for (x, y, w, h) in faces:
+                    face_samples.append(img_numpy[y:y+h, x:x+w])
+                    ids.append(id)
+
+            return face_samples, ids
+
+        faces, ids = get_image_and_labels(path)
+        recognizer.train(faces, np.array(ids))
+        recognizer.write('trainer/trainer.yml')
+
+        return jsonify({'message': 'Training completed successfully', 'total_ids': len(np.unique(ids))})
+    except Exception as e:
+        logging.error(f"Error during training: {str(e)}")
+        return jsonify({'message': 'Failed to complete training'}), 500
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
