@@ -83,7 +83,20 @@ def capture_image():
         # Save the image to a file
         image_save_path = f'./captured_images/{user_id}'
         os.makedirs(image_save_path, exist_ok=True)
-        image_filename = f'{user_id}.png'
+
+        # Find the number of existing files
+        existing_files = [f for f in os.listdir(image_save_path) if f.startswith(f'{user_id}.') and f.endswith('.png')]
+        if len(existing_files) >= 20:
+            return jsonify({'message': 'Maximum number of images captured'}), 400
+
+        # Find the next available index for the image filename
+        if existing_files:
+            existing_indices = [int(f.split('.')[1]) for f in existing_files]
+            next_index = max(existing_indices) + 1
+        else:
+            next_index = 1
+
+        image_filename = f'{user_id}.{next_index}.png'
         image.save(os.path.join(image_save_path, image_filename))
 
         # Save the image info to the captures table

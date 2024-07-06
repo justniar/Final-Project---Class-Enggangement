@@ -9,11 +9,11 @@ const modelPath = '/models/';
 
 interface CapturedImage {
   src: string;
-  label: string;
+  userId: string;
 }
 
 const CaptureDataset: React.FC = () => {
-  const [label, setLabel] = useState<string>('');
+  // const [label, setLabel] = useState<string>('');
   const [capturedImages, setCapturedImages] = useState<CapturedImage[]>([]);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [isWebcamActive, setIsWebcamActive] = useState<boolean>(true);
@@ -80,8 +80,8 @@ const CaptureDataset: React.FC = () => {
   };
 
   const captureImage = async () => {
-    if (!videoRef.current || !canvasRef.current || !label || isCapturing) return;
-    
+    if (!videoRef.current || !canvasRef.current || !userId || isCapturing || captureCount >= 20) return;
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -91,20 +91,20 @@ const CaptureDataset: React.FC = () => {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const capturedImageSrc = canvas.toDataURL('image/png');
-    const newCapturedImage: CapturedImage = { src: capturedImageSrc, label };
+    const newCapturedImage: CapturedImage = { src: capturedImageSrc, userId };
     setCapturedImages((prevImages) => [...prevImages, newCapturedImage]);
 
     setCaptureCount((prevCount) => prevCount + 1);
-    console.log('Face captured and labeled:', label);
+    console.log('Face captured and labeled:', userId);
 
     try {
       const response = await axios.post('http://localhost:5000/capture', { userId, image: capturedImageSrc });
       console.log(response.data.message);
     } catch (error) {
-        console.error('Error capturing image:', error);
+      console.error('Error capturing image:', error);
     }
 
-    if (captureCount === 9) {
+    if (captureCount + 1 === 20) {
       stopCapturing();
     }
   };
@@ -118,7 +118,7 @@ const CaptureDataset: React.FC = () => {
     const delay = 2000; // Adjust delay time in milliseconds
     const interval = setInterval(() => {
       captureImage();
-      if (captureCount === 9) {
+      if (captureCount >= 20) {
         clearInterval(interval);
         stopCapturing();
       }
@@ -149,18 +149,15 @@ const CaptureDataset: React.FC = () => {
     stopWebcam();
   };
 
+  const startTraining = () => {
+    
+  }
+
   return (
     <PageContainer title="Capture Dataset" description="Capture images for dataset">
       <Box>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={12}>
-            <TextField 
-              label="Label" 
-              variant="outlined" 
-              value={label} 
-              onChange={(e) => setLabel(e.target.value)} 
-              fullWidth
-            />
             <TextField
               label="User ID"
               variant="outlined"
@@ -177,14 +174,6 @@ const CaptureDataset: React.FC = () => {
             </Box>
           </Grid>
           <Grid item xs={12} lg={6}>
-            <Button 
-              variant="contained" 
-              onClick={captureImage} 
-              fullWidth
-              disabled={isCapturing}
-            >
-              Capture Image
-            </Button>
             <Button
               variant="contained"
               onClick={startCapturingAutomatically}
@@ -202,6 +191,15 @@ const CaptureDataset: React.FC = () => {
             >
               {isWebcamActive ? 'Turn Off Webcam' : 'Turn On Webcam'}
             </Button>
+            <Button
+              variant="contained"
+              onClick={startTraining}
+              fullWidth
+              sx={{ mt: 2 }}
+              disabled={isCapturing}
+            >
+              Start Training Image
+            </Button>
           </Grid>
           <Grid item xs={12}>
             <Typography variant="h6" gutterBottom>
@@ -214,7 +212,7 @@ const CaptureDataset: React.FC = () => {
                     <CardMedia component="img" height="140" image={image.src} alt={`Captured ${index + 1}`} />
                     <CardContent>
                       <Typography variant="body2" color="textSecondary" component="p">
-                        {image.label}
+                        {image.userId}
                       </Typography>
                     </CardContent>
                   </Card>
