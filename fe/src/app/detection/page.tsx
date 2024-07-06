@@ -149,7 +149,7 @@ const Detection: React.FC = () => {
     return false;
   };
 
-  const drawFaces = (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string, capturedImages: CapturedImage[]) => {
+  const drawFaces = async (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string, capturedImages: CapturedImage[]) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -161,10 +161,13 @@ const Detection: React.FC = () => {
     for (const { src, label } of capturedImages) {
       const img = new Image();
       img.src = src;
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, img.width, img.height);
-        ctx.fillText(`Label: ${label}`, 10, 50);
-      };
+      await new Promise((resolve) => {
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+          ctx.fillText(`Label: ${label}`, 10, 50);
+          resolve(null);
+        };
+      });
     }
   
     // Draw detected faces
@@ -189,9 +192,64 @@ const Detection: React.FC = () => {
       ctx.fillText(`expression: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 41);
       ctx.fillText(`age: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y - 23);
       ctx.fillText(`roll:${person.angle.roll}° pitch:${person.angle.pitch}° yaw:${person.angle.yaw}°`, person.detection.box.x, person.detection.box.y - 5);
+  
+      // Call identify user API
+      const identifyUserResult = await identifyUser(person.detection.box, canvas);
+      if (identifyUserResult.user_id !== 'unknown') {
+        ctx.fillText(`User ID: ${identifyUserResult.user_id}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 15);
+      }
+  
+      // Call predict API
+      const predictResult = await predict(person.detection.box, canvas);
+      ctx.fillText(`Expression: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 35);
+    }
+  };  
+
+  const identifyUser = async (box: faceapi.Box, canvas: HTMLCanvasElement) => {
+    try {
+      const formData = new FormData();
+      const blob = await fetch(canvas.toDataURL()).then((res) => res.blob());
+      formData.append('frame', blob, 'snapshot.png');
+
+      const response = await fetch('http://localhost:5000/identify-user', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Identify User API failed');
+      }
+
+      const data = await response.json();
+      return { user_id: data.user_id };
+    } catch (error) {
+      console.error('Error identifying user:', error);
+      return { user_id: 'unknown' };
     }
   };
-  
+
+  const predict = async (box: faceapi.Box, canvas: HTMLCanvasElement) => {
+    try {
+      const formData = new FormData();
+      const blob = await fetch(canvas.toDataURL()).then((res) => res.blob());
+      formData.append('frame', blob, 'snapshot.png');
+
+      const response = await fetch('http://localhost:5000/predict', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Predict API failed');
+      }
+
+      const data = await response.json();
+      return { expression: data.expression };
+    } catch (error) {
+      console.error('Error predicting expression:', error);
+      return { expression: 'unknown' };
+    }
+  };
 
   const toggleWebcam = () => {
     if (isWebcamActive) {
