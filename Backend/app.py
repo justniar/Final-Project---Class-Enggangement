@@ -1,5 +1,6 @@
 import os
 import io
+import csv
 import numpy as np
 import base64
 from PIL import Image
@@ -51,18 +52,18 @@ def predict():
         expression_predicted_class_label = expression_class_labels[expression_predicted_class]
 
         # Save prediction to the database
-        nim = 200511152
+        # nim = 200511152
 
-        if nim:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute(
-                "INSERT INTO detections (nim, expression) VALUES (%s, %s)",
-                (nim, expression_predicted_class_label)
-            )
-            conn.commit()
-            cur.close()
-            conn.close()
+        # if nim:
+        #     conn = get_db_connection()
+        #     cur = conn.cursor()
+        #     cur.execute(
+        #         "INSERT INTO detections (nim, expression) VALUES (%s, %s)",
+        #         (nim, expression_predicted_class_label)
+        #     )
+        #     conn.commit()
+        #     cur.close()
+        #     conn.close()
 
         return jsonify({
             'expression_predicted_class': expression_predicted_class_label
@@ -110,6 +111,22 @@ def capture_image():
         conn.commit()
         cur.close()
         conn.close()
+
+        #  # Save the user ID to the CSV file
+        # csv_file_path = 'user_id.csv'
+        # user_ids = []
+
+        # if os.path.isfile(csv_file_path):
+        #     with open(csv_file_path, mode='r') as csv_file:
+        #         csv_reader = csv.reader(csv_file)
+        #         for row in csv_reader:
+        #             user_ids.extend(row)
+
+        # user_ids.append(user_id)
+
+        # with open(csv_file_path, mode='w', newline='') as csv_file:
+        #     csv_writer = csv.writer(csv_file)
+        #     csv_writer.writerow(user_ids)
 
         return jsonify({'message': 'Image captured and saved successfully'})
     except Exception as e:
@@ -178,6 +195,39 @@ def start_training():
         logging.error(f"Error during training: {str(e)}")
         return jsonify({'message': 'Failed to complete training', 'error': str(e)}), 500
 
+
+@app.route('/identify-user', methods=['POST'])
+def identify_user():
+    try:
+        if 'frame' not in request.files:
+            return jsonify({'error': 'No image part in the request'}), 400
+
+        file = request.files['frame']
+        img = Image.open(file.stream).convert('L')
+        img = np.array(img, 'uint8')
+
+        recognizer = cv2.face.LBPHFaceRecognizer_create()
+        recognizer.read('trainer/trainer.yml')
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+        faces = face_cascade.detectMultiScale(img, scaleFactor=1.2, minNeighbors=5, minSize=(30, 30))
+
+        if len(faces) == 0:
+            return jsonify({'message': 'No faces detected'}), 400
+
+        for (x, y, w, h) in faces:
+            id, confidence = recognizer.predict(img[y:y+h, x:x+w])
+            confidence = round(100 - confidence)
+
+            if confidence > 50:
+                user_id = id
+            else:
+                user_id = 'unknown'
+
+        return jsonify({'user_id': user_id, 'confidence': confidence})
+    except Exception as e:
+        logging.error(f"Error identifying user: {str(e)}")
+        return jsonify({'message': 'Failed to identify user', 'error': str(e)}), 500
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
