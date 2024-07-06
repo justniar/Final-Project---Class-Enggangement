@@ -153,9 +153,13 @@ def start_training():
                         print(f"No faces detected in image: {image_path}")
                     else:
                         for (x, y, w, h) in faces:
-                            face_samples.append(img_numpy[y:y+h, x+x+w])
-                            ids.append(id)
-                            print(f"Detected face in image: {image_path}, ID: {id}")
+                            # Ensure coordinates are within bounds
+                            if x >= 0 and y >= 0 and x + w <= img_numpy.shape[1] and y + h <= img_numpy.shape[0]:
+                                face_samples.append(img_numpy[y:y+h, x:x+w])
+                                ids.append(id)
+                                print(f"Detected face in image: {image_path}, ID: {id}")
+                            else:
+                                print(f"Face coordinates out of bounds in image: {image_path}")
 
                 except Exception as e:
                     print(f"Error processing image {image_path}: {e}")
@@ -173,6 +177,7 @@ def start_training():
     except Exception as e:
         logging.error(f"Error during training: {str(e)}")
         return jsonify({'message': 'Failed to complete training', 'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
