@@ -216,11 +216,11 @@ def identify_user():
             return jsonify({'message': 'No faces detected'}), 400
 
         for (x, y, w, h) in faces:
-            id, confidence = recognizer.predict(img[y:y+h, x:x+w])
+            label, confidence = recognizer.predict(img[y:y+h, x:x+w])
             confidence = round(100 - confidence)
 
             if confidence > 50:
-                user_id = id
+                user_id = str(label)
             else:
                 user_id = 'unknown'
 

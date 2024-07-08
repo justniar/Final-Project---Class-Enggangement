@@ -32,7 +32,7 @@ const Menuitems = [
     id: uniqueId(),
     title: "Ambil Dataset Wajah",
     icon: IconLayoutDashboard,
-    href: "/recognize",
+    href: "/capture",
   },
   // {
   //   navlabel: true,
