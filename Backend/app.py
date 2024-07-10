@@ -51,26 +51,15 @@ def predict():
         expression_class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
         expression_predicted_class_label = expression_class_labels[expression_predicted_class]
 
-        # Save prediction to the database
-        # nim = 200511152
-
-        # if nim:
-        #     conn = get_db_connection()
-        #     cur = conn.cursor()
-        #     cur.execute(
-        #         "INSERT INTO detections (nim, expression) VALUES (%s, %s)",
-        #         (nim, expression_predicted_class_label)
-        #     )
-        #     conn.commit()
-        #     cur.close()
-        #     conn.close()
+        print(expression_predicted_class_label)
 
         return jsonify({
-            'expression_predicted_class': expression_predicted_class_label
+            'expression_predicted_class_label': expression_predicted_class_label
         })
     except Exception as e:
         logging.error(f"Error processing prediction: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/capture', methods=['POST'])
 def capture_image():
@@ -225,9 +214,10 @@ def identify_user():
                 user_id = 'unknown'
 
         return jsonify({'user_id': user_id, 'confidence': confidence})
+
     except Exception as e:
         logging.error(f"Error identifying user: {str(e)}")
-        return jsonify({'message': 'Failed to identify user', 'error': str(e)}), 500
+        return jsonify({'error': 'Failed to identify user', 'details': str(e)}), 500
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)

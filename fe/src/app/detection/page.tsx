@@ -37,31 +37,25 @@ interface FaceApiResult {
   };
 }
 
-interface CapturedImage {
-  src: string;
-  label: string;
-}
-
 let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 
 const Detection: React.FC = () => {
-  const [predictedUser, setPredictedUser] = useState<string | null>(null);
-  const [predictedExpression, setPredictedExpression] = useState<string | null>(null);
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  // const [predictedUser, setPredictedUser] = useState<string | null>(null);
+  // const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isWebcamActive, setIsWebcamActive] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const lastPredictionRef = useRef<string | null>(null);
+  // const lastPredictionRef = useRef<string | null>(null);
 
   useEffect(() => {
     const loadModels = async () => {
-      await faceapi.nets.ssdMobilenetv1.loadFromUri('./models');
-      await faceapi.nets.ageGenderNet.loadFromUri('./models');
-      await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
-      await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
-      await faceapi.nets.faceExpressionNet.loadFromUri('./models');
+      await faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
+      await faceapi.nets.ageGenderNet.loadFromUri(modelPath);
+      await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
+      await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
+      await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
       console.log('Face API models loaded');
 
       optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
@@ -137,11 +131,11 @@ const Detection: React.FC = () => {
           roll: res.angle.roll ?? 0,
           pitch: res.angle.pitch ?? 0,
           yaw: res.angle.yaw ?? 0,
-        },
+        }
       }));
 
       const fps = 1000 / (performance.now() - t0);
-      drawFaces(canvas, faceApiResults, fps.toLocaleString(), []); // Pass an empty array for capturedImages for now
+      drawFaces(canvas, faceApiResults, fps.toLocaleString());
       requestAnimationFrame(() => detectVideo(video, canvas));
     } catch (err) {
       console.error(`Detect Error: ${JSON.stringify(err)}`);
@@ -149,7 +143,7 @@ const Detection: React.FC = () => {
     return false;
   };
 
-  const drawFaces = async (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string, capturedImages: CapturedImage[]) => {
+  const drawFaces = async (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -157,22 +151,9 @@ const Detection: React.FC = () => {
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
   
-    // Draw captured images and labels
-    for (const { src, label } of capturedImages) {
-      const img = new Image();
-      img.src = src;
-      await new Promise((resolve) => {
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, img.width, img.height);
-          ctx.fillText(`Label: ${label}`, 10, 50);
-          resolve(null);
-        };
-      });
-    }
-  
-    // Draw detected faces
+    // Draw detected faces and predictions
     for (const person of data) {
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 1;
       ctx.strokeStyle = 'deepskyblue';
       ctx.fillStyle = 'deepskyblue';
       ctx.globalAlpha = 0.6;
@@ -181,29 +162,61 @@ const Detection: React.FC = () => {
       ctx.stroke();
       ctx.globalAlpha = 1;
   
+      // Draw Face API predictions
       const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
-      ctx.fillStyle = 'black';
-      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 59);
-      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 41);
-      ctx.fillText(`umur: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y - 23);
-      ctx.fillText(`angle:${person.angle.roll}° pitch:${person.angle.pitch}° yaw:${person.angle.yaw}°`, person.detection.box.x, person.detection.box.y - 5);
       ctx.fillStyle = 'lightblue';
-      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 59);
-      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 41);
-      ctx.fillText(`umur: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y - 23);
-      ctx.fillText(`angle:${person.angle.roll}° pitch:${person.angle.pitch}° yaw:${person.angle.yaw}°`, person.detection.box.x, person.detection.box.y - 5);
+      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 40);
+      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
+      ctx.fillText(`umur: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y);
+      // ctx.fillText(`angle:${person.angle.roll}° pitch:${person.angle.pitch}° yaw:${person.angle.yaw}°`, person.detection.box.x, person.detection.box.y - 5);
 
-      // Call identify user API
-      const identifyUserResult = await identifyUser(person.detection.box, canvas);
-      if (identifyUserResult.user_id !== 'unknown') {
-        ctx.fillText(`User ID: ${identifyUserResult.user_id}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 15);
-      }
+      // Call Identify User API
+      // const identifyUserResult = await identifyUser(person.detection.box, canvas);
+      // if (identifyUserResult.user_id !== 'unknown') {
+      //   ctx.fillText(`ID User: ${identifyUserResult.user_id}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 35);
+      // }
   
-      // Call predict API
+      // Call Predict  API
       const predictResult = await predict(person.detection.box, canvas);
-      ctx.fillText(`Expression: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 35);
+      ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y - 5);
+      // ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y - 5);
+      console.log(predictResult)
+      console.log(predictResult.expression)
     }
-  };  
+  };
+
+  const cropCanvas = (canvas: HTMLCanvasElement, box: faceapi.Box) => {
+    const croppedCanvas = document.createElement('canvas');
+    const ctx = croppedCanvas.getContext('2d');
+    croppedCanvas.width = box.width;
+    croppedCanvas.height = box.height;
+    ctx?.drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
+    return croppedCanvas;
+  };
+
+  const predict = async (box: faceapi.Box, canvas: HTMLCanvasElement) => {
+    try {
+      const formData = new FormData();
+      const croppedCanvas = cropCanvas(canvas, box);
+      const blob = await fetch(croppedCanvas.toDataURL()).then((res) => res.blob());
+      formData.append('frame', blob, 'snapshot.png');
+
+      const response = await fetch('http://localhost:5000/predict', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Predict API failed');
+      }
+
+      const data = await response.json();
+      return { expression: data.expression_predicted_class_label };
+    } catch (error) {
+      console.error('Error predicting:', error);
+      return { expression: 'unknown' };
+    }
+  };
 
   const identifyUser = async (box: faceapi.Box, canvas: HTMLCanvasElement) => {
     try {
@@ -228,45 +241,35 @@ const Detection: React.FC = () => {
     }
   };
 
-  const predict = async (box: faceapi.Box, canvas: HTMLCanvasElement) => {
-    try {
-      const formData = new FormData();
-      const blob = await fetch(canvas.toDataURL()).then((res) => res.blob());
-      formData.append('frame', blob, 'snapshot.png');
+  // const predict = async (box: faceapi.Box, canvas: HTMLCanvasElement) => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append('frame', 'snapshot.png');
 
-      const response = await fetch('http://localhost:5000/predict', {
-        method: 'POST',
-        body: formData,
-      });
+  //     const response = await fetch('http://localhost:5000/predict', {
+  //       method: 'POST',
+  //       body: formData,
+  //     });
 
-      if (!response.ok) {
-        throw new Error('Predict API failed');
-      }
+  //     if (!response.ok) {
+  //       throw new Error('Predict API failed');
+  //     }
 
-      const data = await response.json();
-      return { expression: data.expression };
-    } catch (error) {
-      console.error('Error predicting expression:', error);
-      return { expression: 'unknown' };
-    }
-  };
+  //     const data = await response.json();
+  //     return { expression: data.expression_predicted_class_label };
+  //   } catch (error) {
+  //     console.error('Error predicting:', error);
+  //     return { expression: 'unknown' };
+  //   }
+  // };
 
-  const toggleWebcam = () => {
-    if (isWebcamActive) {
-      stopWebcam();
-    } else {
-      setupCamera();
-    }
-    setIsWebcamActive(!isWebcamActive);
-  };
-
-  const stopWebcam = () => {
+  const handleToggleWebcam = () => {
+    setIsWebcamActive((prevIsActive) => !prevIsActive);
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
+    } else {
+      setupCamera();
     }
   };
 
@@ -275,7 +278,7 @@ const Detection: React.FC = () => {
       <Box>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={12}>
-            <Button variant="contained" color="primary" onClick={toggleWebcam}>
+            <Button variant="contained" color="primary" onClick={handleToggleWebcam}>
               {isWebcamActive ? 'Turn Off Webcam' : 'Turn On Webcam'}
             </Button>
             <Box
@@ -283,7 +286,6 @@ const Detection: React.FC = () => {
                 position: 'relative',
                 overflow: 'hidden',
                 '& video': {
-                  position: '',
                   top: 0,
                   left: 0,
                   width: '100%',
