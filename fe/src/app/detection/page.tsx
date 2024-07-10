@@ -5,6 +5,7 @@ import * as faceapi from '@vladmandic/face-api';
 import { Grid, Box, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
+import axios from 'axios';
 
 const modelPath = '/models/';
 const minScore = 0.2;
@@ -40,32 +41,31 @@ interface FaceApiResult {
 let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 
 const Detection: React.FC = () => {
-  // const [predictedUser, setPredictedUser] = useState<string | null>(null);
-  // const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isWebcamActive, setIsWebcamActive] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // const lastPredictionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const loadModels = async () => {
-      await faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
-      await faceapi.nets.ageGenderNet.loadFromUri(modelPath);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
-      await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
-      console.log('Face API models loaded');
-
-      optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
-      setupCamera();
+    const loadModels = () => {
+      faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath)
+        .then(() => faceapi.nets.ageGenderNet.loadFromUri(modelPath))
+        .then(() => faceapi.nets.faceLandmark68Net.loadFromUri(modelPath))
+        .then(() => faceapi.nets.faceRecognitionNet.loadFromUri(modelPath))
+        .then(() => faceapi.nets.faceExpressionNet.loadFromUri(modelPath))
+        .then(() => {
+          console.log('Face API models loaded');
+          optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
+          setupCamera();
+        })
+        .catch(err => console.error('Model loading error:', err));
     };
 
     loadModels();
   }, []);
 
-  const setupCamera = async () => {
+  const setupCamera = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
@@ -73,10 +73,9 @@ const Detection: React.FC = () => {
 
     if (!navigator.mediaDevices) {
       console.error('Camera Error: access not supported');
-      return null;
+      return;
     }
 
-    let stream;
     const constraints: MediaStreamConstraints = {
       audio: false,
       video: {
@@ -86,22 +85,14 @@ const Detection: React.FC = () => {
       }
     };
 
-    try {
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (err) {
-      console.error(`Camera Error: ${(err as Error).message || err}`);
-      return null;
-    }
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(stream => {
+        setStream(stream);
+        video.srcObject = stream;
+      })
+      .catch(err => console.error(`Camera Error: ${(err as Error).message || err}`));
 
-    if (stream) {
-      setStream(stream);
-      video.srcObject = stream;
-    } else {
-      console.error('Camera Error: stream empty');
-      return null;
-    }
-
-    video.onloadeddata = async () => {
+    video.onloadeddata = () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       video.play();
@@ -109,50 +100,46 @@ const Detection: React.FC = () => {
     };
   };
 
-  const detectVideo = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
-    if (!video || video.paused) return false;
+  const detectVideo = (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+    if (!video || video.paused) return;
 
     const t0 = performance.now();
-    try {
-      const result = await faceapi
-        .detectAllFaces(video, optionsSSDMobileNet)
-        .withFaceLandmarks()
-        .withFaceExpressions()
-        .withAgeAndGender();
+    faceapi.detectAllFaces(video, optionsSSDMobileNet)
+      .withFaceLandmarks()
+      .withFaceExpressions()
+      .withAgeAndGender()
+      .then(result => {
+        const faceApiResults: FaceApiResult[] = result.map(res => ({
+          detection: res.detection,
+          expressions: res.expressions as unknown as { [key: string]: number },
+          age: res.age,
+          gender: res.gender,
+          genderProbability: res.genderProbability,
+          landmarks: res.landmarks,
+          angle: {
+            roll: res.angle.roll ?? 0,
+            pitch: res.angle.pitch ?? 0,
+            yaw: res.angle.yaw ?? 0,
+          }
+        }));
 
-      const faceApiResults: FaceApiResult[] = result.map((res) => ({
-        detection: res.detection,
-        expressions: res.expressions as unknown as { [key: string]: number },
-        age: res.age,
-        gender: res.gender,
-        genderProbability: res.genderProbability,
-        landmarks: res.landmarks,
-        angle: {
-          roll: res.angle.roll ?? 0,
-          pitch: res.angle.pitch ?? 0,
-          yaw: res.angle.yaw ?? 0,
-        }
-      }));
-
-      const fps = 1000 / (performance.now() - t0);
-      drawFaces(canvas, faceApiResults, fps.toLocaleString());
-      requestAnimationFrame(() => detectVideo(video, canvas));
-    } catch (err) {
-      console.error(`Detect Error: ${JSON.stringify(err)}`);
-    }
-    return false;
+        const fps = 1000 / (performance.now() - t0);
+        drawFaces(canvas, faceApiResults, fps.toLocaleString());
+        return result;
+      })
+      .then(() => requestAnimationFrame(() => detectVideo(video, canvas)))
+      .catch(err => console.error(`Detect Error: ${JSON.stringify(err)}`));
   };
 
-  const drawFaces = async (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string) => {
+  const drawFaces = (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = 'small-caps 20px "Segoe UI"';
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
-  
-    // Draw detected faces and predictions
-    for (const person of data) {
+
+    data.forEach(person => {
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'deepskyblue';
       ctx.fillStyle = 'deepskyblue';
@@ -161,112 +148,44 @@ const Detection: React.FC = () => {
       ctx.rect(person.detection.box.x, person.detection.box.y, person.detection.box.width, person.detection.box.height);
       ctx.stroke();
       ctx.globalAlpha = 1;
-  
-      // Draw Face API predictions
+
       const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
       ctx.fillStyle = 'lightblue';
       ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 40);
       ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
       ctx.fillText(`umur: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y);
-      // ctx.fillText(`angle:${person.angle.roll}° pitch:${person.angle.pitch}° yaw:${person.angle.yaw}°`, person.detection.box.x, person.detection.box.y - 5);
 
-      // Call Identify User API
-      // const identifyUserResult = await identifyUser(person.detection.box, canvas);
-      // if (identifyUserResult.user_id !== 'unknown') {
-      //   ctx.fillText(`ID User: ${identifyUserResult.user_id}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 35);
-      // }
-  
-      // Call Predict  API
-      const predictResult = await predict(person.detection.box, canvas);
-      ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y - 5);
-      // ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y - 5);
-      console.log(predictResult)
-      console.log(predictResult.expression)
-    }
+      predict(person.detection.box, canvas)
+        .then(predictResult => {
+          ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y - 5);
+          console.log(predictResult);
+          console.log(predictResult.expression);
+        })
+        .catch(error => {
+          console.error('Error predicting:', error);
+        });
+    });
   };
 
-  const cropCanvas = (canvas: HTMLCanvasElement, box: faceapi.Box) => {
-    const croppedCanvas = document.createElement('canvas');
-    const ctx = croppedCanvas.getContext('2d');
-    croppedCanvas.width = box.width;
-    croppedCanvas.height = box.height;
-    ctx?.drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
-    return croppedCanvas;
-  };
-
-  const predict = async (box: faceapi.Box, canvas: HTMLCanvasElement) => {
-    try {
-      const formData = new FormData();
-      const croppedCanvas = cropCanvas(canvas, box);
-      const blob = await fetch(croppedCanvas.toDataURL()).then((res) => res.blob());
-      formData.append('frame', blob, 'snapshot.png');
-
-      const response = await fetch('http://localhost:5000/predict', {
-        method: 'POST',
-        body: formData,
+  const predict = (box: faceapi.Box, canvas: HTMLCanvasElement) => {
+    const formData = new FormData();
+    return axios.post('http://localhost:5000/predict', formData)
+      .then(response => {
+        if (response.status !== 200) {
+          throw new Error('Predict API failed');
+        }
+        return { expression: response.data.expression_predicted_class_label };
+      })
+      .catch(error => {
+        console.error('Error predicting:', error);
+        return { expression: 'unknown' };
       });
-
-      if (!response.ok) {
-        throw new Error('Predict API failed');
-      }
-
-      const data = await response.json();
-      return { expression: data.expression_predicted_class_label };
-    } catch (error) {
-      console.error('Error predicting:', error);
-      return { expression: 'unknown' };
-    }
   };
-
-  const identifyUser = async (box: faceapi.Box, canvas: HTMLCanvasElement) => {
-    try {
-      const formData = new FormData();
-      const blob = await fetch(canvas.toDataURL()).then((res) => res.blob());
-      formData.append('frame', blob, 'snapshot.png');
-
-      const response = await fetch('http://localhost:5000/identify-user', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Identify User API failed');
-      }
-
-      const data = await response.json();
-      return { user_id: data.user_id };
-    } catch (error) {
-      console.error('Error identifying user:', error);
-      return { user_id: 'unknown' };
-    }
-  };
-
-  // const predict = async (box: faceapi.Box, canvas: HTMLCanvasElement) => {
-  //   try {
-  //     const formData = new FormData();
-  //     formData.append('frame', 'snapshot.png');
-
-  //     const response = await fetch('http://localhost:5000/predict', {
-  //       method: 'POST',
-  //       body: formData,
-  //     });
-
-  //     if (!response.ok) {
-  //       throw new Error('Predict API failed');
-  //     }
-
-  //     const data = await response.json();
-  //     return { expression: data.expression_predicted_class_label };
-  //   } catch (error) {
-  //     console.error('Error predicting:', error);
-  //     return { expression: 'unknown' };
-  //   }
-  // };
 
   const handleToggleWebcam = () => {
-    setIsWebcamActive((prevIsActive) => !prevIsActive);
+    setIsWebcamActive(prevIsActive => !prevIsActive);
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach(track => track.stop());
       setStream(null);
     } else {
       setupCamera();
@@ -306,7 +225,7 @@ const Detection: React.FC = () => {
             </Box>
           </Grid>
         </Grid>
-        <StudentEnggagement/>
+        <StudentEnggagement />
       </Box>
     </PageContainer>
   );
