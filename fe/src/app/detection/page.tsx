@@ -26,7 +26,7 @@ interface Prediction {
 interface FaceApiResult {
   detection: faceapi.FaceDetection;
   expressions: { [key: string]: number };
-  age: number;
+  // age: number;
   gender: string;
   genderProbability: number;
   landmarks: faceapi.FaceLandmarks68;
@@ -123,7 +123,7 @@ const Detection: React.FC = () => {
       const faceApiResults: FaceApiResult[] = result.map((res) => ({
         detection: res.detection,
         expressions: res.expressions as unknown as { [key: string]: number },
-        age: res.age,
+        // age: res.age,
         gender: res.gender,
         genderProbability: res.genderProbability,
         landmarks: res.landmarks,
@@ -166,11 +166,11 @@ const Detection: React.FC = () => {
       ctx.fillStyle = 'lightblue';
       ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 40);
       ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
-      ctx.fillText(`umur: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y);
+      // ctx.fillText(`umur: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y);
 
       // Call Predict  API
       const predictResult = predict(person.detection.box, canvas);
-      ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 15);
+      ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
       console.log(predictResult);
       console.log(predictResult.expression);
     }
