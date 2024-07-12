@@ -8,9 +8,13 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from tensorflow.keras.models import load_model
 from tensorflow.keras.losses import SparseCategoricalCrossentropy
+import tensorflow as tf
 import psycopg2
 import logging
-import cv2 
+import cv2
+from sqlalchemy import create_engine, Column, Integer, String, LargeBinary
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 app = Flask(__name__)
 CORS(app)
@@ -19,12 +23,39 @@ class CustomSparseCategoricalCrossentropy(SparseCategoricalCrossentropy):
     def __init__(self, from_logits=False):
         super().__init__(from_logits=from_logits, reduction='none', name='custom_sparse_categorical_crossentropy')
 
-# Load your models here
-expression_recognition_model_path = 'model/ClassEnggagementDetectionDrownsinessTune.h5'
-expression_recognition_model = load_model(expression_recognition_model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
+# Get the absolute path of the current directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the absolute path to the model file
+model_path = os.path.join(current_dir, 'model', 'ClassEnggagementDetectionDrownsinessTune.h5')
+
+# Custom loss function definition
+class CustomSparseCategoricalCrossentropy(tf.keras.losses.Loss):
+    def call(self, y_true, y_pred):
+        return tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred)
+
+# Load the model
+try:
+    expression_recognition_model = load_model(model_path, custom_objects={'CustomSparseCategoricalCrossentropy': CustomSparseCategoricalCrossentropy()})
+    print("Model loaded successfully.")
+except FileNotFoundError as e:
+    print(f"Error: {e}")
+    print("Make sure the model file exists and the path is correct.")
 
 # Database connection details
 DATABASE_URL = "postgresql://postgres:postgres@localhost/engagement_db"
+# engine = create_engine(DATABASE_URL)
+# Base = declarative_base()
+
+# class Face(Base):
+#     __tablename__ = 'faces'
+#     id = Column(Integer, primary_key=True)
+#     user_id = Column(String, nullable=False)
+#     descriptor = Column(LargeBinary, nullable=False)
+
+# Base.metadata.create_all(engine)
+# Session = sessionmaker(bind=engine)
+# session = Session()
 
 def get_db_connection():
     conn = psycopg2.connect(DATABASE_URL)
@@ -59,7 +90,6 @@ def predict():
     except Exception as e:
         logging.error(f"Error processing prediction: {str(e)}")
         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/capture', methods=['POST'])
 def capture_image():
@@ -101,27 +131,10 @@ def capture_image():
         cur.close()
         conn.close()
 
-        #  # Save the user ID to the CSV file
-        # csv_file_path = 'user_id.csv'
-        # user_ids = []
-
-        # if os.path.isfile(csv_file_path):
-        #     with open(csv_file_path, mode='r') as csv_file:
-        #         csv_reader = csv.reader(csv_file)
-        #         for row in csv_reader:
-        #             user_ids.extend(row)
-
-        # user_ids.append(user_id)
-
-        # with open(csv_file_path, mode='w', newline='') as csv_file:
-        #     csv_writer = csv.writer(csv_file)
-        #     csv_writer.writerow(user_ids)
-
         return jsonify({'message': 'Image captured and saved successfully'})
     except Exception as e:
         logging.error(f"Error capturing image: {e}")
         return jsonify({'message': 'Failed to capture image'}), 500
-    
 
 @app.route('/start-training', methods=['POST'])
 def start_training():
@@ -184,40 +197,40 @@ def start_training():
         logging.error(f"Error during training: {str(e)}")
         return jsonify({'message': 'Failed to complete training', 'error': str(e)}), 500
 
+@app.route('/save_face', methods=['POST'])
+def save_face():
+    data = request.json
+    user_id = data['user_id']
+    descriptor = np.array(data['descriptor'], dtype=np.float32).tobytes()
+    
+    # Save the image info to the captures table
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO captures (label, src) VALUES (%s, %s)",
+        (user_id, os.path.join(user_id, descriptor))
+    )
+    conn.commit()
+    cur.close()
+    conn.close()
 
-@app.route('/identify-user', methods=['POST'])
-def identify_user():
-    try:
-        if 'frame' not in request.files:
-            return jsonify({'error': 'No image part in the request'}), 400
+    with open(f'labeled_descriptors/{user_id}.json', 'w') as f:
+        jsonify.dump(descriptor, f)
 
-        file = request.files['frame']
-        img = Image.open(file.stream).convert('L')
-        img = np.array(img, 'uint8')
+    return jsonify({'message': 'Descriptor saved successfully'}), 200
+    
+    return jsonify({'message': 'Face saved successfully'}), 201
 
-        recognizer = cv2.face.LBPHFaceRecognizer_create()
-        recognizer.read('trainer/trainer.yml')
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-
-        faces = face_cascade.detectMultiScale(img, scaleFactor=1.2, minNeighbors=5, minSize=(30, 30))
-
-        if len(faces) == 0:
-            return jsonify({'message': 'No faces detected'}), 400
-
-        for (x, y, w, h) in faces:
-            label, confidence = recognizer.predict(img[y:y+h, x:x+w])
-            confidence = round(100 - confidence)
-
-            if confidence > 50:
-                user_id = str(label)
-            else:
-                user_id = 'unknown'
-
-        return jsonify({'user_id': user_id, 'confidence': confidence})
-
-    except Exception as e:
-        logging.error(f"Error identifying user: {str(e)}")
-        return jsonify({'error': 'Failed to identify user', 'details': str(e)}), 500
+@app.route('/get_faces', methods=['GET'])
+def get_faces():
+    faces = session.query(Face).all()
+    result = []
+    for face in faces:
+        result.append({
+            'user_id': face.user_id,
+            'descriptor': np.frombuffer(face.descriptor, dtype=np.float32).tolist()
+        })
+    return jsonify(result), 200
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
