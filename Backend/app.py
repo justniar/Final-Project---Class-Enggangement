@@ -29,6 +29,18 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 # Construct the absolute path to the model file
 model_path = os.path.join(current_dir, 'model', 'ClassEnggagementDetectionDrownsinessTune.h5')
 
+# Load the recognizer and face detector
+recognizer = cv2.face.LBPHFaceRecognizer_create()
+recognizer.read('trainer/trainer.yml')
+cascadePath = "haarcascade_frontalface_default.xml"
+faceCascade = cv2.CascadeClassifier(cascadePath)
+
+# Define the font for text on the image
+font = cv2.FONT_HERSHEY_SIMPLEX
+
+# Define the list of names (IDs)
+names = ['None', 'Shendi', 'Abah', 'Hansohee', 'Jokowi', 'Bill Gates', 'Elon Musk', 'Salsa']
+
 # Custom loss function definition
 class CustomSparseCategoricalCrossentropy(tf.keras.losses.Loss):
     def call(self, y_true, y_pred):
@@ -197,6 +209,44 @@ def start_training():
         logging.error(f"Error during training: {str(e)}")
         return jsonify({'message': 'Failed to complete training', 'error': str(e)}), 500
 
+@app.route('/identify-user', methods=['GET'])
+def identify_user():
+    # Initialize and configure the webcam
+    cam = cv2.VideoCapture(0)
+    cam.set(3, 640)  # Set video width
+    cam.set(4, 480)  # Set video height
+    ret, img = cam.read()
+    if not ret:
+        return jsonify({"error": "Could not read image from webcam"}), 500
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = faceCascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5, minSize=(int(0.1 * cam.get(3)), int(0.1 * cam.get(4))))
+
+    result = []
+    for (x, y, w, h) in faces:
+        id, confidence = recognizer.predict(gray[y:y+h, x:x+w])
+        
+        if confidence < 100:
+            id_name = names[id]
+            confidence_text = "{0}%".format(round(100 - confidence))
+        else:
+            id_name = "unknown"
+            confidence_text = "{0}%".format(round(100 - confidence))
+
+        result.append({
+            "id": id_name,
+            "confidence": confidence_text,
+            "box": [x, y, w, h]
+        })
+
+        # Draw rectangle around the face and add text
+        cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv2.putText(img, str(id_name), (x+5, y-5), font, 1, (255, 255, 255), 2)
+        cv2.putText(img, str(confidence_text), (x+5, y+h-5), font, 1, (255, 255, 255), 1)
+
+    _, jpeg = cv2.imencode('.jpg', img)
+    return Response(jpeg.tobytes(), mimetype='image/jpeg')
+
 @app.route('/save_face', methods=['POST'])
 def save_face():
     data = request.json
@@ -215,7 +265,7 @@ def save_face():
     conn.close()
 
     with open(f'labeled_descriptors/{user_id}.json', 'w') as f:
-        jsonify.dump(descriptor, f)
+        json.dump(descriptor, f)
 
     return jsonify({'message': 'Descriptor saved successfully'}), 200
     

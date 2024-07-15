@@ -1,11 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // webpack: (config, { isServer }) => {
-  //       if (!isServer) {
-  //         config.resolve.alias['@vladmandic/face-api'] = '@vladmandic/face-api/dist/face-api.js';
-  //       }
-  //       return config;
-  //     },
+  // webpack5: true,
+  // webpack: (config) => {
+  //   config.resolve.fallback = { fs: false, tls: false };
+  //   config.cache = false;
+  //   return config;
+  // },
   module: {
     rules: [
       { test: /face-api.esm.js/, type: 'javascript/esm' },
@@ -13,40 +13,26 @@ const nextConfig = {
   },
   reactStrictMode: true,
 };
-
-// module.exports = {
-//   module: {
-//     rules: [
-//       { test: /face-api.esm.js/, type: 'javascript/esm' },
-//     ],
-//   },
-// }
-module.exports = nextConfig;
-
 // /** @type {import('next').NextConfig} */
 // const nextConfig = {
 //   webpack: (config, { isServer }) => {
+//     // Fixes npm packages that depend on `fs` module
 //     if (!isServer) {
-//       config.resolve.fallback = {
-//         ...config.resolve.fallback,
-//         '@vladmandic/face-api': require.resolve('@vladmandic/face-api/dist/face-api.js/'),
+//       config.node = {
+//         fs: 'empty'
 //       };
+//       config.resolve.alias['@vladmandic/face-api'] = '@vladmandic/face-api/dist/face-api.js';
 //     }
+
+//     // Add rule for handling face-api.esm.js
+//     config.module.rules.push({
+//       test: /face-api.esm.js/,
+//       type: 'javascript/esm'
+//     });
+
 //     return config;
 //   },
 //   reactStrictMode: true,
 // };
-// module.exports = nextConfig;
 
-// // const path = require('path');
-
-// // module.exports = {
-// //   webpack: (config, { isServer }) => {
-// //     if (!isServer) {
-// //       config.resolve.alias['@vladmandic/face-api'] = '@vladmandic/face-api/dist/face-api.js';
-// //     }
-// //     return config;
-// //   },
-// //   reactStrictMode: true,
-// // };
-
+module.exports = nextConfig;
