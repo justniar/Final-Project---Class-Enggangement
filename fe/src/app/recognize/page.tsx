@@ -1,19 +1,10 @@
 'use client';
-// import { TextEncoder, TextDecoder } from 'text-encoding';
+import { TextEncoder, TextDecoder } from 'text-encoding';
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
 import { Grid, Box, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
-
-// if (typeof window !== 'undefined') {
-//   // Check if TextEncoder and TextDecoder are not available
-//   if (!window.TextEncoder || !window.TextDecoder) {
-//     const { TextEncoder, TextDecoder } = require('util');
-//     window.TextEncoder = TextEncoder;
-//     window.TextDecoder = TextDecoder;
-//   }
-// }
 
 const modelPath = '/models/';
 const minScore = 0.2;
@@ -57,20 +48,20 @@ const Recognize: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // useEffect(() => {
-  //   loadModels();
-  // }, []);
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Polyfill TextEncoder and TextDecoder if they are not available
-      if (!window.TextEncoder || !window.TextDecoder) {
-        const { TextEncoder, TextDecoder } = require('util');
-        window.TextEncoder = TextEncoder;
-        window.TextDecoder = TextDecoder;
-      }
-      loadModels();
-    }
+    loadModels();
   }, []);
+  // useEffect(() => {
+  //   if (typeof window !== 'undefined') {
+  //     // Polyfill TextEncoder and TextDecoder if they are not available
+  //     if (!window.TextEncoder || !window.TextDecoder) {
+  //       const { TextEncoder, TextDecoder } = require('util');
+  //       window.TextEncoder = TextEncoder;
+  //       window.TextDecoder = TextDecoder;
+  //     }
+  //     loadModels();
+  //   }
+  // }, []);
 
   const loadModels = () => {
     faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath)
@@ -93,7 +84,7 @@ const Recognize: React.FC = () => {
   };
   
   const loadLabeledDescriptors = async () => {
-    const labels = ['Black Widow', 'Captain America', 'Hawkeye' , 'Jim Rhodes', 'Tony Stark', 'Thor', 'Captain Marvel']; // Replace with your user IDs
+    const labels = ['Black Widow', 'Captain America', 'Hawkeye' , 'Jim Rhodes', 'Tony Stark', 'Thor', 'Captain Marvel']; 
     const labeledDescriptors = await Promise.all(
       labels.map(async (label) => {
         const descriptions: Float32Array[] = [];
@@ -239,7 +230,7 @@ const Recognize: React.FC = () => {
       formData.append('frame', blob, 'snapshot.png');
 
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://localhost:5000/predict', false); // false for synchronous request
+      xhr.open('POST', 'http://localhost:5000/predict', false);
       xhr.send(formData);
 
       if (xhr.status === 200) {

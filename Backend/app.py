@@ -209,43 +209,38 @@ def start_training():
         logging.error(f"Error during training: {str(e)}")
         return jsonify({'message': 'Failed to complete training', 'error': str(e)}), 500
 
-@app.route('/identify-user', methods=['GET'])
+@app.route('/identify-user', methods=['POST'])
 def identify_user():
-    # Initialize and configure the webcam
-    cam = cv2.VideoCapture(0)
-    cam.set(3, 640)  # Set video width
-    cam.set(4, 480)  # Set video height
-    ret, img = cam.read()
-    if not ret:
-        return jsonify({"error": "Could not read image from webcam"}), 500
+    try:
+        if 'frame' not in request.files:
+            return jsonify({'error': 'No image part in the request'}), 400
 
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    faces = faceCascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=5, minSize=(int(0.1 * cam.get(3)), int(0.1 * cam.get(4))))
+        file = request.files['frame']
+        img = Image.open(file.stream).convert('L')
+        img = np.array(img, 'uint8')
 
-    result = []
-    for (x, y, w, h) in faces:
-        id, confidence = recognizer.predict(gray[y:y+h, x:x+w])
-        
-        if confidence < 100:
-            id_name = names[id]
-            confidence_text = "{0}%".format(round(100 - confidence))
-        else:
-            id_name = "unknown"
-            confidence_text = "{0}%".format(round(100 - confidence))
+        recognizer = cv2.face.LBPHFaceRecognizer_create()
+        recognizer.read('trainer/trainer.yml')
+        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-        result.append({
-            "id": id_name,
-            "confidence": confidence_text,
-            "box": [x, y, w, h]
-        })
+        faces = face_cascade.detectMultiScale(img, scaleFactor=1.2, minNeighbors=5, minSize=(30, 30))
 
-        # Draw rectangle around the face and add text
-        cv2.rectangle(img, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        cv2.putText(img, str(id_name), (x+5, y-5), font, 1, (255, 255, 255), 2)
-        cv2.putText(img, str(confidence_text), (x+5, y+h-5), font, 1, (255, 255, 255), 1)
+        if len(faces) == 0:
+            return jsonify({'message': 'No faces detected'}), 400
 
-    _, jpeg = cv2.imencode('.jpg', img)
-    return Response(jpeg.tobytes(), mimetype='image/jpeg')
+        for (x, y, w, h) in faces:
+            id, confidence = recognizer.predict(img[y:y+h, x:x+w])
+            confidence = round(100 - confidence)
+
+            if confidence > 50:
+                user_id = id
+            else:
+                user_id = 'unknown'
+
+        return jsonify({'user_id': user_id, 'confidence': confidence})
+    except Exception as e:
+        logging.error(f"Error identifying user: {str(e)}")
+        return jsonify({'message': 'Failed to identify user', 'error': str(e)}), 500
 
 @app.route('/save_face', methods=['POST'])
 def save_face():
@@ -269,8 +264,6 @@ def save_face():
 
     return jsonify({'message': 'Descriptor saved successfully'}), 200
     
-    return jsonify({'message': 'Face saved successfully'}), 201
-
 @app.route('/get_faces', methods=['GET'])
 def get_faces():
     faces = session.query(Face).all()
