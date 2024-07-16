@@ -32,6 +32,7 @@ const App = () => {
   }, []);
 
   const setupCamera = async () => {
+    
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
@@ -131,7 +132,6 @@ const App = () => {
         ctx.fill();
       }
 
-      // Predict user and expression
       predictOnFrame(person.detection.box, canvas);
     }
   };
