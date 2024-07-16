@@ -174,11 +174,11 @@ const Detection: React.FC = () => {
       console.log(predictResult);
       console.log(predictResult.expression);
 
-      // // Call Predict User  API
-      // const identifyUser = predictUser(person.detection.box, canvas);
-      // ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
-      // console.log(identifyUser);
-      // console.log(identifyUser.user_id);
+      // Call Predict User  API
+      const identifyUser = predictUser(person.detection.box, canvas);
+      ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
+      console.log(identifyUser);
+      console.log(identifyUser.user_id);
     }
   };
 
@@ -214,29 +214,29 @@ const Detection: React.FC = () => {
     }
   };
 
-  // const predictUser = (box: faceapi.Box, canvas: HTMLCanvasElement) => {
-  //   try {
-  //     const formData = new FormData();
-  //     const croppedCanvas = cropCanvas(canvas, box);
-  //     const blob = dataURLtoBlob(croppedCanvas.toDataURL());
-  //     console.log(cropCanvas)
-  //     formData.append('frame', blob, 'snapshot.png');
+  const predictUser = (box: faceapi.Box, canvas: HTMLCanvasElement) => {
+    try {
+      const formData = new FormData();
+      const croppedCanvas = cropCanvas(canvas, box);
+      const blob = dataURLtoBlob(croppedCanvas.toDataURL());
+      console.log(cropCanvas)
+      formData.append('frame', blob, 'snapshot.png');
 
-  //     const xhr = new XMLHttpRequest();
-  //     xhr.open('POST', 'http://localhost:5000/identify-user', false);
-  //     xhr.send(formData);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', 'http://localhost:5000/identify-user', false);
+      xhr.send(formData);
 
-  //     if (xhr.status === 200) {
-  //       const response = JSON.parse(xhr.responseText);
-  //       return { user_id: response.user_id, confidence: response.confidence };
-  //     } else {
-  //       throw new Error('Predict API failed');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error predicting:', error);
-  //     return { user_id: 'unknown' };
-  //   }
-  // };
+      if (xhr.status === 200) {
+        const response = JSON.parse(xhr.responseText);
+        return { user_id: response.user_id, confidence: response.confidence };
+      } else {
+        throw new Error('Predict API failed');
+      }
+    } catch (error) {
+      console.error('Error predicting:', error);
+      return { user_id: 'unknown' };
+    }
+  };
 
   const dataURLtoBlob = (dataurl: string) => {
     const arr = dataurl.split(',');
