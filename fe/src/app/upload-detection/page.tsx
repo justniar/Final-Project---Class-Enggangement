@@ -115,7 +115,7 @@ const UploadDetection: React.FC = () => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'small-caps 20px "Segoe UI"';
+    ctx.font = 'small-caps 10px "Segoe UI"';
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
 
@@ -131,8 +131,8 @@ const UploadDetection: React.FC = () => {
 
       const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
       ctx.fillStyle = 'lightblue';
-      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 40);
-      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
+      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 20);
+      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 10);
 
       const predictResult = predict(person.detection.box, canvas);
       ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
@@ -140,7 +140,7 @@ const UploadDetection: React.FC = () => {
       console.log(predictResult.expression);
 
       const identifyUser = predictUser(person.detection.box, canvas);
-      ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
+      ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 10);
       console.log(identifyUser);
       console.log(identifyUser.user_id);
     }
