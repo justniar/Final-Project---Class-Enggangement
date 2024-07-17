@@ -27,8 +27,7 @@ class CustomSparseCategoricalCrossentropy(SparseCategoricalCrossentropy):
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the absolute path to the model file
-# model_path = os.path.join(current_dir, 'model', 'ClassEnggagementDetectionDrownsinessTune.h5')
-model_path = os.path.join(current_dir, 'model', 'yawn_detection.h5')
+model_path = os.path.join(current_dir, 'model', 'ClassEnggagementDetectionDrownsinessTune.h5')
 
 # Load the recognizer and face detector
 recognizer = cv2.face.LBPHFaceRecognizer_create()
@@ -92,8 +91,7 @@ def predict():
         expression_predicted_class = np.argmax(expression_predictions)
 
         # Define class labels
-        # expression_class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
-        expression_class_labels = ['no_yawn', 'yawn']
+        expression_class_labels = ['Closed', 'Open', 'no_yawn', 'yawn']
         expression_predicted_class_label = expression_class_labels[expression_predicted_class]
 
         print(expression_predicted_class_label)
@@ -276,8 +274,6 @@ def get_faces():
             'descriptor': np.frombuffer(face.descriptor, dtype=np.float32).tolist()
         })
     return jsonify(result), 200
-
-
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
