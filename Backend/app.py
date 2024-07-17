@@ -277,6 +277,8 @@ def get_faces():
         })
     return jsonify(result), 200
 
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(debug=True)

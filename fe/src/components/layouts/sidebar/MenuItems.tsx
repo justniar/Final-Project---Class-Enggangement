@@ -24,9 +24,15 @@ const Menuitems = [
   },
   {
     id: uniqueId(),
-    title: "Monitoring",
+    title: "Real Time Monitoring",
     icon: IconLayoutDashboard,
     href: "/detection",
+  },
+  {
+    id: uniqueId(),
+    title: "Upload Video Monitoring",
+    icon: IconLayoutDashboard,
+    href: "/upload-detection",
   },
   {
     id: uniqueId(),

@@ -8,6 +8,10 @@ import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import ProductPerformance from '@/components/dashboard/ProductPerformance';
 import Blog from '@/components/dashboard/Blog';
 import MonthlyEarnings from '@/components/dashboard/MonthlyEarnings';
+import SesiKuliah from '@/components/dashboard/RecentTransactions';
+import PerformaPendidik from '@/components/dashboard/ProductPerformance';
+import TingkatFokus from '@/components/dashboard/YearlyBreakup';
+import Keefektifan from '@/components/dashboard/MonthlyEarnings';
 
 const Dashboard = () => {
   return (
@@ -20,18 +24,18 @@ const Dashboard = () => {
           <Grid item xs={12} lg={4}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
-                <YearlyBreakup />
+                <TingkatFokus />
               </Grid>
               <Grid item xs={12}>
-                <MonthlyEarnings />
+                <Keefektifan />
               </Grid>
             </Grid>
           </Grid>
           <Grid item xs={12} lg={4}>
-            <RecentTransactions />
+            <SesiKuliah />
           </Grid>
           <Grid item xs={12} lg={8}>
-            <ProductPerformance />
+            <PerformaPendidik/>
           </Grid>
           <Grid item xs={12}>
             <Blog />

@@ -5,6 +5,7 @@ import * as faceapi from '@vladmandic/face-api';
 import { Grid, Box, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
+import { Prediction } from '@/types/prediction';
 
 const modelPath = '/models/';
 const minScore = 0.2;
@@ -17,11 +18,11 @@ interface DetectionBox {
   height: number;
 }
 
-interface Prediction {
-  user: string;
-  expression: string;
-  time: string;
-}
+// interface Prediction {
+//   user: string;
+//   expression: string;
+//   time: string;
+// }
 
 interface FaceApiResult {
   detection: faceapi.FaceDetection;
@@ -42,6 +43,7 @@ let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 const Detection: React.FC = () => {
   const [isWebcamActive, setIsWebcamActive] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -170,7 +172,7 @@ const Detection: React.FC = () => {
 
       // Call Predict  API
       const predictResult = predict(person.detection.box, canvas);
-      ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
+      ctx.fillText(`Ketertarikan: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
       console.log(predictResult);
       console.log(predictResult.expression);
 
@@ -283,7 +285,7 @@ const Detection: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
-      <StudentEnggagement />
+      <StudentEnggagement studentMonitoring={predictions}/>
     </PageContainer>
   );
 };
