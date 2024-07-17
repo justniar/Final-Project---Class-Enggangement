@@ -50,10 +50,10 @@ const products = [
 ];
 
 
-const ProductPerformance = () => {
+const PerformaPendidik = () => {
     return (
 
-        <DashboardCard title="Product Performance">
+        <DashboardCard title="Performa Pendidik">
             <Box sx={{ overflow: 'auto', width: { xs: '280px', sm: 'auto' } }}>
                 <Table
                     aria-label="simple table"
@@ -66,27 +66,27 @@ const ProductPerformance = () => {
                         <TableRow>
                             <TableCell>
                                 <Typography variant="subtitle2" fontWeight={600}>
-                                    Id
+                                    ID
                                 </Typography>
                             </TableCell>
                             <TableCell>
                                 <Typography variant="subtitle2" fontWeight={600}>
-                                    Assigned
+                                    Nama
                                 </Typography>
                             </TableCell>
                             <TableCell>
                                 <Typography variant="subtitle2" fontWeight={600}>
-                                    Name
+                                    Mata Kuliah
                                 </Typography>
                             </TableCell>
                             <TableCell>
                                 <Typography variant="subtitle2" fontWeight={600}>
-                                    Priority
+                                    Fokus
                                 </Typography>
                             </TableCell>
                             <TableCell align="right">
                                 <Typography variant="subtitle2" fontWeight={600}>
-                                    Budget
+                                    Sesi
                                 </Typography>
                             </TableCell>
                         </TableRow>
@@ -154,4 +154,4 @@ const ProductPerformance = () => {
     );
 };
 
-export default ProductPerformance;
+export default PerformaPendidik;

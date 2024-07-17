@@ -7,7 +7,7 @@ import { IconArrowUpLeft } from '@tabler/icons-react';
 
 import DashboardCard from '@/components/shared/DashboardCard';
 
-const YearlyBreakup = () => {
+const TingkatFokus = () => {
   // chart color
   const theme = useTheme();
   const primary = theme.palette.primary.main;
@@ -63,7 +63,7 @@ const YearlyBreakup = () => {
   const seriescolumnchart: any = [38, 40, 25];
 
   return (
-    <DashboardCard title="Yearly Breakup">
+    <DashboardCard title="Tingkat Fokus">
       <Grid container spacing={3}>
         {/* column */}
         <Grid item xs={7} sm={7}>
@@ -114,4 +114,4 @@ const YearlyBreakup = () => {
   );
 };
 
-export default YearlyBreakup;
+export default TingkatFokus;

@@ -12,9 +12,9 @@ import {
 } from '@mui/lab';
 import { Link, Typography } from '@mui/material';
 
-const RecentTransactions = () => {
+const SesiKuliah = () => {
   return (
-    <DashboardCard title="Recent Transactions">
+    <DashboardCard title="Sesi Kuliah">
       <>
         <Timeline
           className="theme-timeline"
@@ -99,4 +99,4 @@ const RecentTransactions = () => {
   );
 };
 
-export default RecentTransactions;
+export default SesiKuliah;

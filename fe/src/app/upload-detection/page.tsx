@@ -5,6 +5,7 @@ import * as faceapi from '@vladmandic/face-api';
 import { Grid, Box, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
+import { Prediction } from '@/types/prediction';
 
 const modelPath = '/models/';
 const minScore = 0.2;
@@ -17,11 +18,11 @@ interface DetectionBox {
   height: number;
 }
 
-interface Prediction {
-  user: string;
-  expression: string;
-  time: string;
-}
+// interface Prediction {
+//   user: string;
+//   expression: string;
+//   time: string;
+// }
 
 interface FaceApiResult {
   detection: faceapi.FaceDetection;
@@ -41,6 +42,7 @@ let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 const UploadDetection: React.FC = () => {
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -139,6 +141,16 @@ const UploadDetection: React.FC = () => {
       console.log(predictResult);
       console.log(predictResult.expression);
 
+      const newPrediction: Prediction = {
+        id: predictions.length + 1,
+        name: 'Unknown', // Replace with actual user identification logic if available
+        expression: expression[0][0],
+        gender: person.gender,
+        focus: predictResult.expression,
+        time: new Date().toLocaleTimeString(),
+      };
+      setPredictions((prev) => [...prev, newPrediction]);
+
       // const identifyUser = predictUser(person.detection.box, canvas);
       // ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 10);
       // console.log(identifyUser);
@@ -213,6 +225,27 @@ const UploadDetection: React.FC = () => {
     return new Blob([u8arr], { type: mime });
   };
 
+  const handleBulkInsert = async () => {
+    try {
+      const response = await fetch('/api/save-predictions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(predictions),
+      });
+
+      if (response.ok) {
+        console.log('Predictions saved successfully');
+        setPredictions([]);
+      } else {
+        console.error('Failed to save predictions');
+      }
+    } catch (error) {
+      console.error('Error saving predictions:', error);
+    }
+  };
+
   return (
     <PageContainer title="Detection" description="this is Detection page">
       <Box>
@@ -237,7 +270,7 @@ const UploadDetection: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
-      <StudentEnggagement />
+      <StudentEnggagement studentMonitoring={predictions} />
     </PageContainer>
   );
 };
