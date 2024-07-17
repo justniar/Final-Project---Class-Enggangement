@@ -172,7 +172,7 @@ const Detection: React.FC = () => {
 
       // Call Predict  API
       const predictResult = predict(person.detection.box, canvas);
-      ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
+      ctx.fillText(`Ketertarikan: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
       console.log(predictResult);
       console.log(predictResult.expression);
 

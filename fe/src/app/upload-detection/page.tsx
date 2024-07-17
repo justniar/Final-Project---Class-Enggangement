@@ -6,6 +6,7 @@ import { Grid, Box, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
 import { Prediction } from '@/types/prediction';
+import axios from 'axios';
 
 const modelPath = '/models/';
 const minScore = 0.2;
@@ -175,7 +176,7 @@ const UploadDetection: React.FC = () => {
       formData.append('frame', blob, 'snapshot.png');
 
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://localhost:5000/predict', false);
+      xhr.open('POST', 'http://localhost:5000/predict', false);      
       xhr.send(formData);
 
       if (xhr.status === 200) {
@@ -227,15 +228,13 @@ const UploadDetection: React.FC = () => {
 
   const handleBulkInsert = async () => {
     try {
-      const response = await fetch('/api/save-predictions', {
-        method: 'POST',
+      const response = await axios.post('http://localhost:5000/save-predictions', predictions, {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(predictions),
       });
 
-      if (response.ok) {
+      if (response.status === 200) {
         console.log('Predictions saved successfully');
         setPredictions([]);
       } else {
@@ -245,6 +244,7 @@ const UploadDetection: React.FC = () => {
       console.error('Error saving predictions:', error);
     }
   };
+
 
   return (
     <PageContainer title="Detection" description="this is Detection page">
@@ -271,6 +271,9 @@ const UploadDetection: React.FC = () => {
         </Grid>
       </Box>
       <StudentEnggagement studentMonitoring={predictions} />
+      <Button variant="contained" onClick={handleBulkInsert}>
+            Simpan hasil deteksi
+      </Button>
     </PageContainer>
   );
 };
