@@ -16,6 +16,7 @@ try:
 except Exception as e:
     print(f"Error loading model: {e}")
     exit()
+    
 
 def preprocess_image(image):
     # Convert the image to RGB format
@@ -23,6 +24,10 @@ def preprocess_image(image):
     # Resize the image to the input size of the model
     image = cv2.resize(image, (640, 640))
     return image
+
+@app.route('/test', methods=['GET'])
+def test():
+    return jsonify({'message': 'Server is running'}), 200
 
 @app.route('/predict', methods=['POST'])
 def predict():
