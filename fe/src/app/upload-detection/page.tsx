@@ -2,11 +2,12 @@
 import { TextEncoder, TextDecoder } from 'text-encoding';
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
-import { Grid, Box, Button } from '@mui/material';
+import { Grid, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
 import { Prediction } from '@/types/prediction';
 import axios from 'axios';
+import { Box } from 'face-api.js';
 
 const modelPath = '/models/';
 const minScore = 0.2;
@@ -71,8 +72,8 @@ const UploadDetection: React.FC = () => {
         video.onloadeddata = () => {
           const canvas = canvasRef.current;
           if (canvas) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth || 0;
+            canvas.height = video.videoHeight || 0;
             video.play();
             detectVideo(video, canvas);
           }
@@ -86,24 +87,8 @@ const UploadDetection: React.FC = () => {
 
     const t0 = performance.now();
     try {
-      const result = await faceapi
-        .detectAllFaces(video, optionsSSDMobileNet)
-        .withFaceLandmarks()
-        .withFaceExpressions()
-        .withAgeAndGender();
-
-      const faceApiResults: FaceApiResult[] = result.map((res) => ({
-        detection: res.detection,
-        expressions: res.expressions as unknown as { [key: string]: number },
-        gender: res.gender,
-        genderProbability: res.genderProbability,
-        landmarks: res.landmarks,
-        angle: {
-          roll: res.angle.roll ?? 0,
-          pitch: res.angle.pitch ?? 0,
-          yaw: res.angle.yaw ?? 0,
-        }
-      }));
+      const yoloResults = await predictWithYOLO(video, canvas);
+      const faceApiResults = await detectFacesInYOLOResults(video, canvas, yoloResults);
 
       const fps = 1000 / (performance.now() - t0);
       drawFaces(canvas, faceApiResults, fps.toLocaleString());
@@ -111,6 +96,50 @@ const UploadDetection: React.FC = () => {
     } catch (err) {
       console.error(`Detect Error: ${JSON.stringify(err)}`);
     }
+  };
+
+  const predictWithYOLO = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+    const formData = new FormData();
+    const canvasSnapshot = document.createElement('canvas');
+    const ctx = canvasSnapshot.getContext('2d');
+    if (!ctx) return [];
+    canvasSnapshot.width = video.videoWidth;
+    canvasSnapshot.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+    const blob = dataURLtoBlob(canvasSnapshot.toDataURL());
+    formData.append('frame', blob, 'snapshot.png');
+
+    const response = await axios.post('http://localhost:5000/predict', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data;
+  };
+
+  const detectFacesInYOLOResults = async (video: HTMLVideoElement, canvas: HTMLCanvasElement, yoloResults: any[]) => {
+    const faceApiResults: FaceApiResult[] = [];
+
+    for (const result of yoloResults){
+      const croppedCanvas = cropCanvas(canvas, result.box);
+      const detections = await faceapi.detectAllFaces(croppedCanvas, optionsSSDMobileNet).withFaceLandmarks().withFaceExpressions().withAgeAndGender();
+
+      for (const detection of detections) {
+        faceApiResults.push({
+          detection: detection.detection,
+          expressions: detection.expressions as unknown as { [key: string]: number },
+          gender: detection.gender,
+          genderProbability: detection.genderProbability,
+          landmarks: detection.landmarks,
+          angle: {
+            roll: detection.angle.roll ?? 0,
+            pitch: detection.angle.pitch ?? 0,
+            yaw: detection.angle.yaw ?? 0,
+          }
+        });
+      }
+    }
+
+    return faceApiResults;
   };
 
   const drawFaces = (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string) => {
@@ -132,7 +161,7 @@ const UploadDetection: React.FC = () => {
       ctx.globalAlpha = 1;
 
       const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
-      ctx.fillStyle = 'lightblue';
+      ctx.fillStyle = 'red'; // Ubah warna dari lightblue ke merah (red)
       ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 20);
       ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 10);
 
@@ -150,20 +179,21 @@ const UploadDetection: React.FC = () => {
         time: new Date().toLocaleTimeString(),
       };
       setPredictions((prev) => [...prev, newPrediction]);
-
-      // const identifyUser = predictUser(person.detection.box, canvas);
-      // ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 10);
-      // console.log(identifyUser);
-      // console.log(identifyUser.user_id);
     }
   };
 
   const cropCanvas = (canvas: HTMLCanvasElement, box: faceapi.Box) => {
     const croppedCanvas = document.createElement('canvas');
     const ctx = croppedCanvas.getContext('2d');
+    
+    if (!ctx) {
+      throw new Error('Unable to create 2D context');
+    }
+  
     croppedCanvas.width = box.width;
     croppedCanvas.height = box.height;
-    ctx?.drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
+    ctx.drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
+    
     return croppedCanvas;
   };
 
@@ -250,15 +280,15 @@ const UploadDetection: React.FC = () => {
 
   return (
     <PageContainer title="Detection" description="this is Detection page">
-      <Box>
+      <div>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={12}>
             <Button variant="contained" color="primary" component="label">
               Upload Video
               <input type="file" accept="video/*" hidden onChange={handleFileChange} />
             </Button>
-            <Box
-              sx={{
+            <div
+              style={{
                 width: '100%',
                 margin: '0 auto',
                 height: '100%',
@@ -268,10 +298,10 @@ const UploadDetection: React.FC = () => {
             >
               <video ref={videoRef} width="100%" height="auto" controls />
               <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
-            </Box>
+            </div>
           </Grid>
         </Grid>
-      </Box>
+      </div>
       <StudentEnggagement studentMonitoring={predictions} />
       <Button variant="contained" onClick={handleBulkInsert}>
             Simpan hasil deteksi
