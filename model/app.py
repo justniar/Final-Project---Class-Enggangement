@@ -138,62 +138,62 @@
 
 # pip install opencv-python
 
-import cv2
-from ultralytics import YOLO
-
-model = YOLO('yolo-Weights/best.pt')
-print(model.names)
-webcamera = cv2.VideoCapture(0)
-# webcamera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-# webcamera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-
-while True:
-    success, frame = webcamera.read()
-    
-    results = model.track(frame, classes=0, conf=0.8, imgsz=480)
-    cv2.putText(frame, f"Total: {len(results[0].boxes)}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-    cv2.imshow("Live Camera", results[0].plot())
-
-    if cv2.waitKey(1) == ord('q'):
-        break
-
-webcamera.release()
-cv2.destroyAllWindows()
-# from flask import Flask, request, jsonify
-# import torch
 # import cv2
-# import numpy as np
 # from ultralytics import YOLO
 
-# app = Flask(__name__)
+# model = YOLO('yolo-Weights/best.pt')
+# print(model.names)
+# webcamera = cv2.VideoCapture(0)
+# # webcamera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+# # webcamera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
-# # Load your YOLOv8 model
-# model = YOLO("best.pt")
+# while True:
+#     success, frame = webcamera.read()
+    
+#     results = model.track(frame, classes=0, conf=0.8, imgsz=480)
+#     cv2.putText(frame, f"Total: {len(results[0].boxes)}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+#     cv2.imshow("Live Camera", results[0].plot())
 
-# def preprocess_image(image):
-#     # Convert the image to RGB format
-#     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-#     # Resize the image to the input size of the model
-#     image = cv2.resize(image, (640, 640))
-#     return image
+#     if cv2.waitKey(1) == ord('q'):
+#         break
 
-# @app.route('/predict', methods=['POST'])
-# def predict():
-#     if 'frame' not in request.files:
-#         return jsonify({'error': 'No image provided'}), 400
+# webcamera.release()
+# cv2.destroyAllWindows()
+from flask import Flask, request, jsonify
+import torch
+import cv2
+import numpy as np
+from ultralytics import YOLO
 
-#     file = request.files['frame']
-#     image = np.frombuffer(file.read(), np.uint8)
-#     image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+app = Flask(__name__)
 
-#     # Preprocess the image
-#     processed_image = preprocess_image(image)
+# Load your YOLOv8 model
+model = YOLO("best.pt")
 
-#     # Perform prediction
-#     results = model(processed_image)
-#     prediction = results.pandas().xyxy[0].to_dict(orient="records")
+def preprocess_image(image):
+    # Convert the image to RGB format
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # Resize the image to the input size of the model
+    image = cv2.resize(image, (640, 640))
+    return image
 
-#     return jsonify(prediction), 200
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'frame' not in request.files:
+        return jsonify({'error': 'No image provided'}), 400
 
-# if __name__ == '__main__':
-#     app.run(host='0.0.0.0', port=5000, debug=True)
+    file = request.files['frame']
+    image = np.frombuffer(file.read(), np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+    # Preprocess the image
+    processed_image = preprocess_image(image)
+
+    # Perform prediction
+    results = model(processed_image)
+    prediction = results.pandas().xyxy[0].to_dict(orient="records")
+
+    return jsonify(prediction), 200
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
