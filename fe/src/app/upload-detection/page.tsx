@@ -182,14 +182,14 @@ const UploadDetection: React.FC = () => {
         const response = JSON.parse(xhr.responseText);
         console.log('API Response:', response); // Log the entire response for debugging
         // Assuming you want the class label of the first prediction
-        const expression = response.length > 0 ? response[0].class : 'fokus';
+        const expression = response.length > 0 ? response[0].class : 'unknown';
         return { expression };
       } else {
         throw new Error('Predict API failed');
       }
     } catch (error) {
       console.error('Error predicting:', error);
-      return { expression: 'fokus' };
+      return { expression: 'unknown' };
     }
   };
 
