@@ -109,12 +109,12 @@
 
 #             file_extension = f.filename.rsplit('.', 1)[1].lower()    
 #             if file_extension == 'jpg':
-#                 process = Popen(["python", "detect.py", '--source', filepath, "--weights","best_246.pt"], shell=True)
+#                 process = Popen(["python", "detect.py", '--source', filepath, "--weights","best.pt"], shell=True)
 #                 process.wait()
                 
                 
 #             elif file_extension == 'mp4':
-#                 process = Popen(["python", "detect.py", '--source', filepath, "--weights","best_246.pt"], shell=True)
+#                 process = Popen(["python", "detect.py", '--source', filepath, "--weights","best.pt"], shell=True)
 #                 process.communicate()
 #                 process.wait()
 
@@ -136,67 +136,86 @@
 #     model.eval()
 #     app.run(host="0.0.0.0", port=args.port)  # debug=True causes Restarting with stat
 
-from ultralytics import YOLO
+# pip install opencv-python
+
+# import cv2
+# from ultralytics import YOLO
+
+# model = YOLO('yolo-Weights/best.pt')
+# print(model.names)
+# webcamera = cv2.VideoCapture(0)
+# # webcamera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+# # webcamera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
+# while True:
+#     success, frame = webcamera.read()
+    
+#     results = model.track(frame, classes=0, conf=0.8, imgsz=480)
+#     cv2.putText(frame, f"Total: {len(results[0].boxes)}", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+#     cv2.imshow("Live Camera", results[0].plot())
+
+#     if cv2.waitKey(1) == ord('q'):
+#         break
+
+# webcamera.release()
+# cv2.destroyAllWindows()
+
+
+# Flask API (app.py)
+from flask import Flask, request, jsonify
 import cv2
-import math 
-# start webcam
-cap = cv2.VideoCapture(0)
-cap.set(3, 640)
-cap.set(4, 480)
+import numpy as np
+from ultralytics import YOLO
+import logging
 
-# model
-model = YOLO("yolo-Weights/yolov8n.pt")
+app = Flask(__name__)
 
-# object classes
-classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
-              "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
-              "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
-              "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball", "kite", "baseball bat",
-              "baseball glove", "skateboard", "surfboard", "tennis racket", "bottle", "wine glass", "cup",
-              "fork", "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange", "broccoli",
-              "carrot", "hot dog", "pizza", "donut", "cake", "chair", "sofa", "pottedplant", "bed",
-              "diningtable", "toilet", "tvmonitor", "laptop", "mouse", "remote", "keyboard", "cell phone",
-              "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors",
-              "teddy bear", "hair drier", "toothbrush"
-              ]
+# Load your YOLOv8 model
+try:
+    model = YOLO("best.pt")
+    print("Model loaded successfully")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    exit()
 
+def preprocess_image(image):
+    # Convert the image to RGB format
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # Resize the image to the input size of the model
+    image = cv2.resize(image, (640, 640))
+    return image
 
-while True:
-    success, img = cap.read()
-    results = model(img, stream=True)
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'frame' not in request.files:
+        return jsonify({'error': 'No image provided'}), 400
 
-    # coordinates
-    for r in results:
-        boxes = r.boxes
+    file = request.files['frame']
+    image = np.frombuffer(file.read(), np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
-        for box in boxes:
-            # bounding box
-            x1, y1, x2, y2 = box.xyxy[0]
-            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2) # convert to int values
+    # Preprocess the image
+    processed_image = preprocess_image(image)
 
-            # put box in cam
-            cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
+    # Perform prediction
+    results = model(processed_image)
 
-            # confidence
-            confidence = math.ceil((box.conf[0]*100))/100
-            print("Confidence --->",confidence)
+    # Extract predictions
+    predictions = []
+    for result in results:
+        for box in result.boxes:
+            bbox = box.xyxy[0].tolist()  # [x1, y1, x2, y2]
+            conf = box.conf[0].item()    # Confidence score
+            cls = box.cls[0].item()      # Class
 
-            # class name
-            cls = int(box.cls[0])
-            print("Class name -->", classNames[cls])
+            predictions.append({
+                'box': bbox,
+                'confidence': conf,
+                'class': cls
+            })
 
-            # object details
-            org = [x1, y1]
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            fontScale = 1
-            color = (255, 0, 0)
-            thickness = 2
+    return jsonify(predictions), 200
 
-            cv2.putText(img, classNames[cls], org, font, fontScale, color, thickness)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
-    cv2.imshow('Webcam', img)
-    if cv2.waitKey(1) == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
