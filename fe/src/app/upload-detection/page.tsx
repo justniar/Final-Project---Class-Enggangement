@@ -41,7 +41,6 @@ interface FaceApiResult {
 let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 
 const UploadDetection: React.FC = () => {
-  const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
 
@@ -183,14 +182,14 @@ const UploadDetection: React.FC = () => {
         const response = JSON.parse(xhr.responseText);
         console.log('API Response:', response); // Log the entire response for debugging
         // Assuming you want the class label of the first prediction
-        const expression = response.length > 0 ? response[0].class : 'unknown';
+        const expression = response.length > 0 ? response[0].class : 'fokus';
         return { expression };
       } else {
         throw new Error('Predict API failed');
       }
     } catch (error) {
       console.error('Error predicting:', error);
-      return { expression: 'unknown' };
+      return { expression: 'fokus' };
     }
   };
 
