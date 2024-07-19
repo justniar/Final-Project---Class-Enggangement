@@ -6,6 +6,13 @@ const nextConfig = {
   //   config.cache = false;
   //   return config;
   // },
+  webpack: (
+    config,
+    { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }
+  ) => {
+    // Important: return the modified config
+    return config
+  },
   module: {
     rules: [
       { test: /face-api.esm.js/, type: 'javascript/esm' },
