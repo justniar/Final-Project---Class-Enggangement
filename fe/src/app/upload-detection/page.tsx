@@ -72,6 +72,8 @@ const UploadDetection: React.FC = () => {
         video.onloadeddata = () => {
           const canvas = canvasRef.current;
           if (canvas) {
+            // const { videoWidth, videoHeight } = video;
+            // console.log(`Video dimensions: ${videoWidth}x${videoHeight}`);
             canvas.width = video.videoWidth || 0;
             canvas.height = video.videoHeight || 0;
             video.play();
