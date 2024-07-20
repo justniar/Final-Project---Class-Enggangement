@@ -160,6 +160,16 @@ const Detection: React.FC = () => {
       const identifyUser = predictUser(person.detection.box, canvas);
       ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
       console.log(identifyUser);
+
+      const newPrediction: Prediction = {
+        id: predictions.length + 1,
+        name: 'Unknown', // Replace with actual user identification logic if available
+        expression: expression[0][0],
+        gender: person.gender,
+        focus: predictResult.expression,
+        time: new Date().toLocaleTimeString(),
+      };
+      setPredictions((prev) => [...prev, newPrediction]);
     }
   };
 
