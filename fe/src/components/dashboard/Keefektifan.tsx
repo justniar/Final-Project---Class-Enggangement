@@ -66,7 +66,7 @@ const Keefektifan = () => {
     >
       <>
         <Typography variant="h3" fontWeight="700" mt="-20px">
-          $6,820
+          6,820
         </Typography>
         <Stack direction="row" spacing={1} my={1} alignItems="center">
           <Avatar sx={{ bgcolor: errorlight, width: 27, height: 27 }}>
@@ -76,7 +76,7 @@ const Keefektifan = () => {
             +9%
           </Typography>
           <Typography variant="subtitle2" color="textSecondary">
-            last year
+            Hari ini
           </Typography>
         </Stack>
       </>
