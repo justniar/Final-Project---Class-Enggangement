@@ -52,20 +52,15 @@ const Detection: React.FC = () => {
     loadModels();
   }, []);
 
-  const loadModels = () => {
-    faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath).then(() => {
-      faceapi.nets.ageGenderNet.loadFromUri(modelPath).then(() => {
-        faceapi.nets.faceLandmark68Net.loadFromUri(modelPath).then(() => {
-          faceapi.nets.faceRecognitionNet.loadFromUri(modelPath).then(() => {
-            faceapi.nets.faceExpressionNet.loadFromUri(modelPath).then(() => {
-              console.log('Face API models loaded');
-              optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
-              setupCamera();
-            });
-          });
-        });
-      });
-    });
+  const loadModels = async () => {
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
+    await faceapi.nets.ageGenderNet.loadFromUri(modelPath);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
+    await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
+    console.log('Face API models loaded');
+    optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
+    setupCamera();
   };
 
   const setupCamera = () => {
@@ -76,10 +71,9 @@ const Detection: React.FC = () => {
 
     if (!navigator.mediaDevices) {
       console.error('Camera Error: access not supported');
-      return null;
+      return;
     }
 
-    let stream;
     const constraints: MediaStreamConstraints = {
       audio: false,
       video: {
@@ -90,14 +84,8 @@ const Detection: React.FC = () => {
     };
 
     navigator.mediaDevices.getUserMedia(constraints).then((mediaStream) => {
-      stream = mediaStream;
-      if (stream) {
-        setStream(stream);
-        video.srcObject = stream;
-      } else {
-        console.error('Camera Error: stream empty');
-        return null;
-      }
+      setStream(mediaStream);
+      video.srcObject = mediaStream;
 
       video.onloadeddata = () => {
         canvas.width = video.videoWidth;
@@ -107,7 +95,6 @@ const Detection: React.FC = () => {
       };
     }).catch((err) => {
       console.error(`Camera Error: ${(err as Error).message || err}`);
-      return null;
     });
   };
 
@@ -125,7 +112,6 @@ const Detection: React.FC = () => {
       const faceApiResults: FaceApiResult[] = result.map((res) => ({
         detection: res.detection,
         expressions: res.expressions as unknown as { [key: string]: number },
-        // age: res.age,
         gender: res.gender,
         genderProbability: res.genderProbability,
         landmarks: res.landmarks,
@@ -152,7 +138,6 @@ const Detection: React.FC = () => {
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
 
-    // Draw detected faces and predictions
     for (const person of data) {
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'deepskyblue';
@@ -163,24 +148,18 @@ const Detection: React.FC = () => {
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      // Draw Face API predictions
       const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
       ctx.fillStyle = 'lightblue';
       ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 40);
-      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
-      // ctx.fillText(`umur: ${Math.round(person.age)} years`, person.detection.box.x, person.detection.box.y);
+      ctx.fillText(`expression: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
 
-      // Call Predict  API
       const predictResult = predict(person.detection.box, canvas);
-      ctx.fillText(`Ketertarikan: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
+      ctx.fillText(`Interest: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
       console.log(predictResult);
-      console.log(predictResult.expression);
 
-      // Call Predict User  API
       const identifyUser = predictUser(person.detection.box, canvas);
       ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
       console.log(identifyUser);
-      console.log(identifyUser.user_id);
     }
   };
 
@@ -201,12 +180,12 @@ const Detection: React.FC = () => {
       formData.append('frame', blob, 'snapshot.png');
 
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://localhost:5000/predict', false); // false for synchronous request
+      xhr.open('POST', 'http://localhost:5000/predict', false);
       xhr.send(formData);
 
       if (xhr.status === 200) {
         const response = JSON.parse(xhr.responseText);
-        return { expression: response.expression_predicted_class_label };
+        return { expression: response[0].class };  // Adjust according to the new response structure
       } else {
         throw new Error('Predict API failed');
       }
@@ -221,7 +200,6 @@ const Detection: React.FC = () => {
       const formData = new FormData();
       const croppedCanvas = cropCanvas(canvas, box);
       const blob = dataURLtoBlob(croppedCanvas.toDataURL());
-      console.log(cropCanvas)
       formData.append('frame', blob, 'snapshot.png');
 
       const xhr = new XMLHttpRequest();
@@ -232,34 +210,35 @@ const Detection: React.FC = () => {
         const response = JSON.parse(xhr.responseText);
         return { user_id: response.user_id, confidence: response.confidence };
       } else {
-        throw new Error('Predict API failed');
+        throw new Error('Identify User API failed');
       }
     } catch (error) {
-      console.error('Error predicting:', error);
-      return { user_id: 'unknown' };
+      console.error('Error identifying user:', error);
+      return { user_id: 'unknown', confidence: 0 };
     }
   };
 
   const dataURLtoBlob = (dataurl: string) => {
     const arr = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)![1];
+    const mime = arr[0].match(/:(.*?);/)?.[1];
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
+
     while (n--) {
       u8arr[n] = bstr.charCodeAt(n);
     }
+
     return new Blob([u8arr], { type: mime });
   };
 
-  const handleToggleWebcam = () => {
-    setIsWebcamActive((prevIsActive) => !prevIsActive);
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
+  const handleSwitch = () => {
+    if (isWebcamActive) {
+      stream?.getTracks().forEach((track) => track.stop());
     } else {
       setupCamera();
     }
+    setIsWebcamActive(!isWebcamActive);
   };
 
   return (
@@ -267,7 +246,7 @@ const Detection: React.FC = () => {
       <Box>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={12}>
-            <Button variant="contained" color="primary" onClick={handleToggleWebcam}>
+            <Button variant="contained" color="primary" onClick={handleSwitch}>
               {isWebcamActive ? 'Turn Off Webcam' : 'Turn On Webcam'}
             </Button>
             <Box
