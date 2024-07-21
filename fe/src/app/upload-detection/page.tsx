@@ -168,7 +168,7 @@ const UploadDetection: React.FC = () => {
       ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 10);
 
       const predictResult = predict(person.detection.box, canvas);
-      ctx.fillText(`Fokus: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
+      ctx.fillText(`Ketertarikan: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
       console.log(predictResult);
       console.log(predictResult.expression);
 

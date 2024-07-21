@@ -251,6 +251,7 @@ const Detection: React.FC = () => {
     setIsWebcamActive(!isWebcamActive);
   };
 
+
   return (
     <PageContainer title="Detection" description="this is Detection page">
       <Box>
