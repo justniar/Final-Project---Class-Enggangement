@@ -12,6 +12,7 @@ import logging
 import cv2
 import numpy as np
 from ultralytics import YOLO
+import subprocess
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
@@ -140,63 +141,17 @@ def capture_image():
 @app.route('/start-training', methods=['POST'])
 def start_training():
     try:
-        path = 'captured_images'
-        recognizer = cv2.face.LBPHFaceRecognizer_create()
-        detector = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+        # Run the training script
+        result = subprocess.run(['python', 'trainer/train_model.py'], capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            message = result.stdout
+        else:
+            message = result.stderr
 
-        def get_image_and_labels(path):
-            image_paths = []
-            for user_id in os.listdir(path):
-                user_dir = os.path.join(path, user_id)
-                if os.path.isdir(user_dir):
-                    for filename in os.listdir(user_dir):
-                        if filename.endswith('.png'):
-                            image_paths.append(os.path.join(user_dir, filename))
-
-            face_samples = []
-            ids = []
-
-            if len(image_paths) == 0:
-                raise ValueError("No images found in the directory. Ensure images are placed in the 'captured_images' directory.")
-
-            for image_path in image_paths:
-                print(f"Processing image: {image_path}")
-                try:
-                    PIL_img = Image.open(image_path).convert('L')
-                    img_numpy = np.array(PIL_img, 'uint8')
-                    print(f"Image shape: {img_numpy.shape}")
-
-                    id = int(os.path.split(image_path)[-1].split(".")[0])
-                    faces = detector.detectMultiScale(img_numpy, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
-                    if len(faces) == 0:
-                        print(f"No faces detected in image: {image_path}")
-                    else:
-                        for (x, y, w, h) in faces:
-                            # Ensure coordinates are within bounds
-                            if x >= 0 and y >= 0 and x + w <= img_numpy.shape[1] and y + h <= img_numpy.shape[0]:
-                                face_samples.append(img_numpy[y:y+h, x:x+w])
-                                ids.append(id)
-                                print(f"Detected face in image: {image_path}, ID: {id}")
-                            else:
-                                print(f"Face coordinates out of bounds in image: {image_path}")
-
-                except Exception as e:
-                    print(f"Error processing image {image_path}: {e}")
-
-            return face_samples, ids
-
-        faces, ids = get_image_and_labels(path)
-        if len(faces) == 0 or len(ids) == 0:
-            raise ValueError("No faces or IDs detected. Ensure you have properly labeled images with faces.")
-
-        recognizer.train(faces, np.array(ids))
-        recognizer.write('trainer/trainer.yml')
-
-        return jsonify({'message': 'Training completed successfully', 'total_ids': len(np.unique(ids))})
+        return jsonify({'message': message}), 200
     except Exception as e:
-        logging.error(f"Error during training: {str(e)}")
-        return jsonify({'message': 'Failed to complete training', 'error': str(e)}), 500
+        return jsonify({'message': f'Error: {str(e)}'}), 500
 
 @app.route('/identify-user', methods=['POST'])
 def identify_user():
