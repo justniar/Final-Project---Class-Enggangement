@@ -62,8 +62,7 @@ const UploadDetection: React.FC = () => {
     } catch (err) {
         console.error(`Detect Error: ${JSON.stringify(err)}`);
     }
-};
-
+  };
 
   const predictWithYOLO = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
     const formData = new FormData();
@@ -75,13 +74,29 @@ const UploadDetection: React.FC = () => {
     ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
     const blob = dataURLtoBlob(canvasSnapshot.toDataURL());
     formData.append('frame', blob, 'snapshot.png');
-
+  
     const response = await axios.post('http://localhost:5000/predict', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-
-    return response.data;
+  
+    const predictions = response.data;
+    
+    // Identify user for each detected face
+    for (const prediction of predictions) {
+      const userFormData = new FormData();
+      userFormData.append('frame', blob, 'snapshot.png');
+      
+      const userResponse = await axios.post('http://localhost:5000/identify-user', userFormData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+  
+      prediction.userId = userResponse.data.user_id;
+      prediction.confidence = userResponse.data.confidence;
+    }
+  
+    return predictions;
   };
+  
 
   const drawDetections = (canvas: HTMLCanvasElement, data: any[], fps: string) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
