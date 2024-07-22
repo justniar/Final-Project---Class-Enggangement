@@ -1,53 +1,76 @@
 'use client';
-import { TextEncoder, TextDecoder } from 'text-encoding';
 import React, { useEffect, useRef, useState } from 'react';
-import { Grid, Button } from '@mui/material';
+import * as faceapi from '@vladmandic/face-api';
+import { Grid, Button, Box } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
 import { Prediction } from '@/types/prediction';
 import axios from 'axios';
 
+const modelPath = '/models/';
 const minScore = 0.2;
 const maxResults = 5;
 
-interface DetectionBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+interface FaceApiResult {
+  detection: faceapi.FaceDetection;
+  expressions: { [key: string]: number };
+  gender: string;
+  genderProbability: number;
+  landmarks: faceapi.FaceLandmarks68;
+  angle: {
+    roll: number;
+    pitch: number;
+    yaw: number;
+  };
 }
 
-let optionsSSDMobileNet: any;
+let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 
 const UploadDetection: React.FC = () => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
-
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    console.log('Component mounted');
+    loadModels();
   }, []);
+
+  useEffect(() => {
+    if (videoFile) {
+      setupVideo(videoFile);
+    }
+  }, [videoFile]);
+
+  const loadModels = async () => {
+    await faceapi.nets.ssdMobilenetv1.loadFromUri(modelPath);
+    await faceapi.nets.ageGenderNet.loadFromUri(modelPath);
+    await faceapi.nets.faceLandmark68Net.loadFromUri(modelPath);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(modelPath);
+    await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
+    console.log('Face API models loaded');
+    optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
+  };
+
+  const setupVideo = (file: File) => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (video && canvas) {
+      video.src = URL.createObjectURL(file);
+      video.onloadeddata = () => {
+        canvas.width = video.videoWidth || 0;
+        canvas.height = video.videoHeight || 0;
+        video.play();
+        detectVideo(video, canvas);
+      };
+    }
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     setVideoFile(file);
-    if (file) {
-      const video = videoRef.current;
-      if (video) {
-        video.src = URL.createObjectURL(file);
-        video.onloadeddata = () => {
-          const canvas = canvasRef.current;
-          if (canvas) {
-            canvas.width = video.videoWidth || 0;
-            canvas.height = video.videoHeight || 0;
-            video.play();
-            detectVideo(video, canvas);
-          }
-        };
-      }
-    }
   };
 
   const detectVideo = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
@@ -55,16 +78,36 @@ const UploadDetection: React.FC = () => {
 
     const t0 = performance.now();
     try {
-        const yoloResults = await predictWithYOLO(video, canvas);
-        const fps = 1000 / (performance.now() - t0);
-        drawDetections(canvas, yoloResults, fps.toLocaleString());
-        requestAnimationFrame(() => detectVideo(video, canvas));
+      const result = await faceapi
+        .detectAllFaces(video, optionsSSDMobileNet)
+        .withFaceLandmarks()
+        .withFaceExpressions()
+        .withAgeAndGender();
+
+      const faceApiResults: FaceApiResult[] = result.map((res) => ({
+        detection: res.detection,
+        expressions: res.expressions as unknown as { [key: string]: number },
+        gender: res.gender,
+        genderProbability: res.genderProbability,
+        landmarks: res.landmarks,
+        angle: {
+          roll: res.angle.roll ?? 0,
+          pitch: res.angle.pitch ?? 0,
+          yaw: res.angle.yaw ?? 0,
+        }
+      }));
+      console.log(result)
+
+      const yoloResults = await predictWithYOLO(video);
+      const fps = 1000 / (performance.now() - t0);
+      drawFaces(canvas, faceApiResults, yoloResults, fps.toLocaleString());
+      requestAnimationFrame(() => detectVideo(video, canvas));
     } catch (err) {
-        console.error(`Detect Error: ${JSON.stringify(err)}`);
+      console.error(`Detect Error: ${JSON.stringify(err)}`);
     }
   };
 
-  const predictWithYOLO = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+  const predictWithYOLO = async (video: HTMLVideoElement) => {
     const formData = new FormData();
     const canvasSnapshot = document.createElement('canvas');
     const ctx = canvasSnapshot.getContext('2d');
@@ -74,80 +117,73 @@ const UploadDetection: React.FC = () => {
     ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
     const blob = dataURLtoBlob(canvasSnapshot.toDataURL());
     formData.append('frame', blob, 'snapshot.png');
-  
+
     const response = await axios.post('http://localhost:5000/predict', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-  
+
     const predictions = response.data;
-    
+
     // Identify user for each detected face
     for (const prediction of predictions) {
       const userFormData = new FormData();
       userFormData.append('frame', blob, 'snapshot.png');
-      
+
       const userResponse = await axios.post('http://localhost:5000/identify-user', userFormData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-  
+
       prediction.userId = userResponse.data.user_id;
       prediction.confidence = userResponse.data.confidence;
     }
-  
+    console.log(predictions)
     return predictions;
   };
-  
 
-  const drawDetections = (canvas: HTMLCanvasElement, data: any[], fps: string) => {
+  const drawFaces = (canvas: HTMLCanvasElement, faceData: FaceApiResult[], yoloData: any[], fps: string) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'small-caps 10px "Segoe UI"';
+    ctx.font = 'small-caps 20px "Segoe UI"';
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
 
-    console.log('Drawing detections:', data); 
-    data.forEach((result: any) => {
-        const [x1, y1, x2, y2] = result.box;
-        const width = x2 - x1;
-        const height = y2 - y1;
-        
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'deepskyblue';
-        ctx.fillStyle = 'deepskyblue';
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        ctx.rect(x1, y1, width, height);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
+    faceData.forEach((person) => {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'deepskyblue';
+      ctx.fillStyle = 'deepskyblue';
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.rect(person.detection.box.x, person.detection.box.y, person.detection.box.width, person.detection.box.height);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
 
-        ctx.fillStyle = 'deepskyblue';
-        ctx.fillText(`Class: ${result.class}`, x1, y1 - 20);
-        ctx.fillText(`Confidence: ${Math.round(result.confidence * 100)}%`, x1, y1 - 10);
-        ctx.fillText(`user id: ${result.userId}`, x1, y1);
+      const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
+      ctx.fillStyle = 'lightblue';
+      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 15);
+      ctx.fillText(`Age: ${Math.round(person.detection.box.width)}`, person.detection.box.x, person.detection.box.y - 35);
+      ctx.fillText(`Emotion: ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 55);
 
-        const newPrediction: Prediction = {
-            id: predictions.length + 1,
-            user_id: result.userId, 
-            expression: result.confidence,
-            gender: 'unknown', // YOLO does not predict gender, replace with actual logic if available
-            focus: result.class,
-            time: new Date().toLocaleTimeString(),
-        };
-        setPredictions((prev) => [...prev, newPrediction]);
+      yoloData.forEach((prediction: any) => {
+        if (prediction.class === 'person' && person.detection.box.x < prediction.box.x && person.detection.box.y < prediction.box.y) {
+          ctx.fillStyle = 'lightblue';
+          ctx.fillText(`User ID: ${prediction.userId}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
+        }
+      });
     });
   };
 
-
   const dataURLtoBlob = (dataurl: string) => {
     const arr = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)![1];
+    const mime = arr[0].match(/:(.*?);/)?.[1];
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
+
     while (n--) {
       u8arr[n] = bstr.charCodeAt(n);
     }
+
     return new Blob([u8arr], { type: mime });
   };
 
@@ -172,33 +208,33 @@ const UploadDetection: React.FC = () => {
 
   return (
     <PageContainer title="Detection" description="this is Detection page">
-      <div>
-        <Grid container spacing={3}>
-          <Grid item xs={12} lg={12}>
-            <Button variant="contained" color="primary" component="label">
-              Upload Video
-              <input type="file" accept="video/*" hidden onChange={handleFileChange} />
-            </Button>
-            <div
-              style={{
-                width: '100%',
-                margin: '0 auto',
-                height: '100%',
-                maxWidth: '800px',
-                position: 'relative',
-              }}
-            >
-              <video ref={videoRef} width="100%" height="auto" controls />
-              <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
-            </div>
-          </Grid>
+    <div>
+      <Grid container spacing={3}>
+        <Grid item xs={12} lg={12}>
+          <Button variant="contained" color="primary" component="label">
+            Upload Video
+            <input type="file" accept="video/*" hidden onChange={handleFileChange} />
+          </Button>
+          <div
+            style={{
+              width: '100%',
+              margin: '0 auto',
+              height: '100%',
+              maxWidth: '800px',
+              position: 'relative',
+            }}
+          >
+            <video ref={videoRef} width="100%" height="auto" controls />
+            <canvas ref={canvasRef} style={{ position: 'absolute', top: 0, left: 0 }} />
+          </div>
         </Grid>
-      </div>
-      <StudentEnggagement studentMonitoring={predictions} />
-      <Button variant="contained" onClick={handleBulkInsert}>
-        Simpan hasil deteksi
-      </Button>
-    </PageContainer>
+      </Grid>
+    </div>
+    <StudentEnggagement studentMonitoring={predictions} />
+    <Button variant="contained" onClick={handleBulkInsert}>
+      Simpan hasil deteksi
+    </Button>
+  </PageContainer>
   );
 };
 
