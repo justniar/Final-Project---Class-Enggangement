@@ -242,39 +242,6 @@ def identify_user():
         logging.error(f"Error identifying user: {str(e)}")
         return jsonify({'message': 'Failed to identify user', 'error': str(e)}), 500
 
-@app.route('/save_face', methods=['POST'])
-def save_face():
-    data = request.json
-    user_id = data['user_id']
-    descriptor = np.array(data['descriptor'], dtype=np.float32).tobytes()
-    
-    # Save the image info to the captures table
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO captures (label, src) VALUES (%s, %s)",
-        (user_id, os.path.join(user_id, descriptor))
-    )
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    with open(f'labeled_descriptors/{user_id}.json', 'w') as f:
-        json.dump(descriptor, f)
-
-    return jsonify({'message': 'Descriptor saved successfully'}), 200
-    
-@app.route('/get_faces', methods=['GET'])
-def get_faces():
-    faces = session.query(Face).all()
-    result = []
-    for face in faces:
-        result.append({
-            'user_id': face.user_id,
-            'descriptor': np.frombuffer(face.descriptor, dtype=np.float32).tolist()
-        })
-    return jsonify(result), 200
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     app.run(debug=True)

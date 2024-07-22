@@ -1,0 +1,8 @@
+path: '/content/gdrive/My Drive/yolo_drownsiness/data' # dataset root dir
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 6
+names: ['bingung', 'bosan', 'fokus', 'frustasi', 'mengantuk', 'tidak-fokus']
+
