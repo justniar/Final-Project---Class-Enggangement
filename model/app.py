@@ -18,7 +18,6 @@ class_labels = ['bingung', 'bosan', 'fokus', 'frustasi', 'mengantuk', 'tidak-fok
 
 def preprocess_image(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = cv2.resize(image, (640, 640))
     return image
 
 @app.route('/test', methods=['GET'])

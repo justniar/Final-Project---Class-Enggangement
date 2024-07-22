@@ -55,14 +55,15 @@ const UploadDetection: React.FC = () => {
 
     const t0 = performance.now();
     try {
-      const yoloResults = await predictWithYOLO(video, canvas);
-      const fps = 1000 / (performance.now() - t0);
-      drawDetections(canvas, yoloResults, fps.toLocaleString());
-      requestAnimationFrame(() => detectVideo(video, canvas));
+        const yoloResults = await predictWithYOLO(video, canvas);
+        const fps = 1000 / (performance.now() - t0);
+        drawDetections(canvas, yoloResults, fps.toLocaleString());
+        requestAnimationFrame(() => detectVideo(video, canvas));
     } catch (err) {
-      console.error(`Detect Error: ${JSON.stringify(err)}`);
+        console.error(`Detect Error: ${JSON.stringify(err)}`);
     }
-  };
+};
+
 
   const predictWithYOLO = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
     const formData = new FormData();
@@ -93,34 +94,35 @@ const UploadDetection: React.FC = () => {
     console.log('Drawing detections:', data); // Log detection data for debugging
 
     data.forEach((result: any) => {
-      const [x1, y1, x2, y2] = result.box;
-      const width = x2 - x1;
-      const height = y2 - y1;
+        const [x1, y1, x2, y2] = result.box;
+        const width = x2 - x1;
+        const height = y2 - y1;
 
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'deepskyblue';
-      ctx.fillStyle = 'deepskyblue';
-      ctx.globalAlpha = 0.6;
-      ctx.beginPath();
-      ctx.rect(x1, y1, width, height);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'deepskyblue';
+        ctx.fillStyle = 'deepskyblue';
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.rect(x1, y1, width, height);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
 
-      ctx.fillStyle = 'red';
-      ctx.fillText(`Class: ${result.class}`, x1, y1 - 20);
-      ctx.fillText(`Confidence: ${Math.round(result.confidence * 100)}%`, x1, y1 - 10);
+        ctx.fillStyle = 'red';
+        ctx.fillText(`Class: ${result.class}`, x1, y1 - 20);
+        ctx.fillText(`Confidence: ${Math.round(result.confidence * 100)}%`, x1, y1 - 10);
 
-      const newPrediction: Prediction = {
-        id: predictions.length + 1,
-        name: 'Unknown', // Replace with actual user identification logic if available
-        expression: result.class,
-        gender: 'unknown', // YOLO does not predict gender, replace with actual logic if available
-        focus: result.class,
-        time: new Date().toLocaleTimeString(),
-      };
-      setPredictions((prev) => [...prev, newPrediction]);
+        const newPrediction: Prediction = {
+            id: predictions.length + 1,
+            name: 'Unknown', // Replace with actual user identification logic if available
+            expression: result.class,
+            gender: 'unknown', // YOLO does not predict gender, replace with actual logic if available
+            focus: result.class,
+            time: new Date().toLocaleTimeString(),
+        };
+        setPredictions((prev) => [...prev, newPrediction]);
     });
   };
+
 
   const dataURLtoBlob = (dataurl: string) => {
     const arr = dataurl.split(',');
