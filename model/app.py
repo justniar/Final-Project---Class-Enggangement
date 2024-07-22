@@ -174,7 +174,7 @@ def identify_user():
         if len(faces) == 0:
             return jsonify({'message': 'No faces detected'}), 400
 
-        user_id = '200511101'
+        user_id = "unknown"
         confidence = 0
 
         for (x, y, w, h) in faces:
@@ -185,10 +185,11 @@ def identify_user():
                 user_id = id
 
         return jsonify({'user_id': user_id, 'confidence': confidence}), 200
-    
+
     except Exception as e:
         logging.error(f"Error identifying user: {str(e)}")
         return jsonify({'message': 'Failed to identify user', 'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
