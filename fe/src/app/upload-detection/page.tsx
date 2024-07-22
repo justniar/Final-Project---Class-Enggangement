@@ -1,5 +1,4 @@
 'use client';
-import { TextEncoder, TextDecoder } from 'text-encoding';
 import React, { useEffect, useRef, useState } from 'react';
 import { Grid, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
@@ -7,21 +6,10 @@ import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
 import { Prediction } from '@/types/prediction';
 import axios from 'axios';
 
-const minScore = 0.2;
-const maxResults = 5;
-
-interface DetectionBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-let optionsSSDMobileNet: any;
-
 const UploadDetection: React.FC = () => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -55,28 +43,36 @@ const UploadDetection: React.FC = () => {
 
     const t0 = performance.now();
     try {
-        const yoloResults = await predictWithYOLO(video, canvas);
-        const fps = 1000 / (performance.now() - t0);
-        drawDetections(canvas, yoloResults, fps.toLocaleString());
-        requestAnimationFrame(() => detectVideo(video, canvas));
+      const faceDetectionResponse = await axios.post('http://localhost:5000/detect_faces', videoFile, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const fps = 1000 / (performance.now() - t0);
+      const yoloResults = await predictWithYOLO(canvas);
+      drawDetections(canvas, yoloResults, fps.toLocaleString());
+
+      // // Fetch predictions after detecting faces
+      // const expressionResponse = await axios.get('http://localhost:5000/recognize_expressions');
+      // setPredictions(expressionResponse.data);
+
+      requestAnimationFrame(() => detectVideo(video, canvas));
     } catch (err) {
-        console.error(`Detect Error: ${JSON.stringify(err)}`);
+      console.error(`Detect Error: ${JSON.stringify(err)}`);
     }
-};
+  };
 
-
-  const predictWithYOLO = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+  const predictWithYOLO = async (canvas: HTMLCanvasElement) => {
     const formData = new FormData();
     const canvasSnapshot = document.createElement('canvas');
     const ctx = canvasSnapshot.getContext('2d');
     if (!ctx) return [];
-    canvasSnapshot.width = video.videoWidth;
-    canvasSnapshot.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+    canvasSnapshot.width = canvas.width;
+    canvasSnapshot.height = canvas.height;
+    ctx.drawImage(canvas, 0, 0);
     const blob = dataURLtoBlob(canvasSnapshot.toDataURL());
     formData.append('frame', blob, 'snapshot.png');
 
-    const response = await axios.post('http://localhost:5000/predict', formData, {
+    const response = await axios.post('http://localhost:5000/recognize_expressions', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
@@ -94,35 +90,24 @@ const UploadDetection: React.FC = () => {
     console.log('Drawing detections:', data); // Log detection data for debugging
 
     data.forEach((result: any) => {
-        const [x1, y1, x2, y2] = result.box;
-        const width = x2 - x1;
-        const height = y2 - y1;
+      const [x1, y1, x2, y2] = result.box;
+      const width = x2 - x1;
+      const height = y2 - y1;
 
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'deepskyblue';
-        ctx.fillStyle = 'deepskyblue';
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        ctx.rect(x1, y1, width, height);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'deepskyblue';
+      ctx.fillStyle = 'deepskyblue';
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.rect(x1, y1, width, height);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
 
-        ctx.fillStyle = 'red';
-        ctx.fillText(`Class: ${result.class}`, x1, y1 - 20);
-        ctx.fillText(`Confidence: ${Math.round(result.confidence * 100)}%`, x1, y1 - 10);
-
-        const newPrediction: Prediction = {
-            id: predictions.length + 1,
-            name: 'Unknown', // Replace with actual user identification logic if available
-            expression: result.class,
-            gender: 'unknown', // YOLO does not predict gender, replace with actual logic if available
-            focus: result.class,
-            time: new Date().toLocaleTimeString(),
-        };
-        setPredictions((prev) => [...prev, newPrediction]);
+      ctx.fillStyle = 'red';
+      ctx.fillText(`Class: ${result.class}`, x1, y1 - 20);
+      ctx.fillText(`Confidence: ${Math.round(result.confidence * 100)}%`, x1, y1 - 10);
     });
   };
-
 
   const dataURLtoBlob = (dataurl: string) => {
     const arr = dataurl.split(',');
@@ -137,6 +122,7 @@ const UploadDetection: React.FC = () => {
   };
 
   const handleBulkInsert = async () => {
+    setLoading(true);
     try {
       const response = await axios.post('http://localhost:5000/save-predictions', predictions, {
         headers: {
@@ -152,11 +138,13 @@ const UploadDetection: React.FC = () => {
       }
     } catch (error) {
       console.error('Error saving predictions:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <PageContainer title="Detection" description="this is Detection page">
+    <PageContainer title="Detection" description="This is the Detection page">
       <div>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={12}>
@@ -180,8 +168,8 @@ const UploadDetection: React.FC = () => {
         </Grid>
       </div>
       <StudentEnggagement studentMonitoring={predictions} />
-      <Button variant="contained" onClick={handleBulkInsert}>
-        Simpan hasil deteksi
+      <Button variant="contained" onClick={handleBulkInsert} disabled={loading}>
+        {loading ? 'Saving...' : 'Save Detection Results'}
       </Button>
     </PageContainer>
   );
