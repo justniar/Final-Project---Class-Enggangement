@@ -75,7 +75,7 @@ import { Prediction } from '@/types/prediction';
                   </TableCell>
                   <TableCell>
                     <Typography variant="subtitle2" fontWeight={600}>
-                      {result.name}
+                      {result.user_id}
                     </Typography>
                   </TableCell>
                   <TableCell>

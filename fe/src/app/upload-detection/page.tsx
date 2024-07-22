@@ -106,13 +106,12 @@ const UploadDetection: React.FC = () => {
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
 
-    console.log('Drawing detections:', data); // Log detection data for debugging
-
+    console.log('Drawing detections:', data); 
     data.forEach((result: any) => {
         const [x1, y1, x2, y2] = result.box;
         const width = x2 - x1;
         const height = y2 - y1;
-
+        
         ctx.lineWidth = 2;
         ctx.strokeStyle = 'deepskyblue';
         ctx.fillStyle = 'deepskyblue';
@@ -122,13 +121,14 @@ const UploadDetection: React.FC = () => {
         ctx.stroke();
         ctx.globalAlpha = 1;
 
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = 'deepskyblue';
         ctx.fillText(`Class: ${result.class}`, x1, y1 - 20);
         ctx.fillText(`Confidence: ${Math.round(result.confidence * 100)}%`, x1, y1 - 10);
+        ctx.fillText(`user id: ${result.userId}`, x1, y1);
 
         const newPrediction: Prediction = {
             id: predictions.length + 1,
-            name: 'Unknown', // Replace with actual user identification logic if available
+            name: result.userId, 
             expression: result.class,
             gender: 'unknown', // YOLO does not predict gender, replace with actual logic if available
             focus: result.class,

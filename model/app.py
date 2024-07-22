@@ -31,7 +31,6 @@ faceCascade = cv2.CascadeClassifier(cascadePath)
 
 # Define the font for text on the image
 font = cv2.FONT_HERSHEY_SIMPLEX
-names = ['200511019','200511142','200511152','200511152']
 # Custom loss function definition
 
 # Load your YOLOv8 model
@@ -172,7 +171,7 @@ def identify_user():
         if len(faces) == 0:
             return jsonify({'message': 'No faces detected'}), 400
 
-        user_id = 'unknown'
+        user_id = '200511019'
         confidence = 0
 
         for (x, y, w, h) in faces:
@@ -183,6 +182,7 @@ def identify_user():
                 user_id = id
 
         return jsonify({'user_id': user_id, 'confidence': confidence}), 200
+    
     except Exception as e:
         logging.error(f"Error identifying user: {str(e)}")
         return jsonify({'message': 'Failed to identify user', 'error': str(e)}), 500
