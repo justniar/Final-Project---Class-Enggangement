@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
-import { Button, Box, Grid, TextField, Typography, Card, CardContent, CardMedia } from '@mui/material';
+import { Button, Box, Grid, TextField, Typography, Card, CardContent, CardMedia, CircularProgress } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import axios from 'axios';
 
@@ -19,6 +19,7 @@ const CaptureDataset: React.FC = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [captureCount, setCaptureCount] = useState<number>(0);
   const [userId, setUserId] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -116,7 +117,7 @@ const CaptureDataset: React.FC = () => {
   };
 
   const captureAutomatically = () => {
-    const delay = 2000; // Adjust delay time in milliseconds
+    const delay = 2000; 
     const interval = setInterval(() => {
       setCaptureCount((prevCount) => {
         if (prevCount < 20) {
@@ -155,11 +156,15 @@ const CaptureDataset: React.FC = () => {
   };
 
   const startTraining = async () => {
+    setIsLoading(true);
     try {
       const response = await axios.post('http://localhost:5000/start-training');
       console.log(response.data.message);
+      setCapturedImages([]);
     } catch (error) {
       console.error('Error starting training:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -206,8 +211,9 @@ const CaptureDataset: React.FC = () => {
               onClick={startTraining}
               fullWidth
               sx={{ mt: 2 }}
+              disabled={isLoading}
             >
-              Start Training Image
+              {isLoading ? <CircularProgress size={24} /> : 'Start Training Image'}
             </Button>
           </Grid>
           <Grid item xs={12}>

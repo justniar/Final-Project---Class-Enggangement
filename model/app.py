@@ -148,6 +148,9 @@ def start_training():
         else:
             message = result.stderr
 
+        print("CompletedProcess:", result)
+        print("Training Output:", message)
+
         return jsonify({'message': message}), 200
     except Exception as e:
         return jsonify({'message': f'Error: {str(e)}'}), 500
