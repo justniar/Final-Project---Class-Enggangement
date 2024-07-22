@@ -128,8 +128,8 @@ const UploadDetection: React.FC = () => {
 
         const newPrediction: Prediction = {
             id: predictions.length + 1,
-            name: result.userId, 
-            expression: result.class,
+            user_id: result.userId, 
+            expression: result.confidence,
             gender: 'unknown', // YOLO does not predict gender, replace with actual logic if available
             focus: result.class,
             time: new Date().toLocaleTimeString(),

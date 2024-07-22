@@ -171,7 +171,7 @@ def identify_user():
         if len(faces) == 0:
             return jsonify({'message': 'No faces detected'}), 400
 
-        user_id = '200511019'
+        user_id = '200511101'
         confidence = 0
 
         for (x, y, w, h) in faces:

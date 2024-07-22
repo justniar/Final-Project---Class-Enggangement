@@ -35,7 +35,7 @@ import { Prediction } from '@/types/prediction';
                 </TableCell>
                 <TableCell>
                   <Typography variant="subtitle2" fontWeight={600}>
-                    Nama
+                    NIM
                   </Typography>
                 </TableCell>
                 <TableCell>

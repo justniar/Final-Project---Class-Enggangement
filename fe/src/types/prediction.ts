@@ -1,6 +1,6 @@
 export interface Prediction {
     id: number;
-    name: string;
+    name?: string;
     user_id?: string;
     expression: string;
     gender: string;
