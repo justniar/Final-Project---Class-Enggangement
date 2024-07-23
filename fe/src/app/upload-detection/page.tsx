@@ -125,6 +125,7 @@ const UploadDetection: React.FC = () => {
     const predictions = response.data;
 
     // Identify user for each detected face
+    // Identifikasi user untuk tiap muka yang terdeteksi
     for (const prediction of predictions) {
       const userFormData = new FormData();
       userFormData.append('frame', blob, 'snapshot.png');
@@ -144,7 +145,7 @@ const UploadDetection: React.FC = () => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'small-caps 20px "Segoe UI"';
+    ctx.font = 'small-caps 12px "Segoe UI"';
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
 
