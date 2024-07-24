@@ -1,10 +1,10 @@
 export interface Prediction {
     id: number;
-    name?: string;
-    user_id?: string;
+    userId: number; // Adjust as necessary
     expression: string;
     gender: string;
-    focus: string;
+    focus: string; // This will come from your custom model
+    confidence: number; // This will come from your custom model
     time: string;
-}
+  }
   

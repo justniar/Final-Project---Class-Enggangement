@@ -140,38 +140,82 @@ const UploadDetection: React.FC = () => {
     console.log(predictions)
     return predictions;
   };
+  const matchBoundingBoxes = (faceApiBoxes: faceapi.Box[], customModelBoxes: any[]) => {
+    const matchedBoxes: any[] = [];
+  
+    for (const faceApiBox of faceApiBoxes) {
+      for (const customBox of customModelBoxes) {
+        const overlap = isOverlapping(faceApiBox, customBox.box);
+        if (overlap) {
+          matchedBoxes.push({
+            faceApiBox,
+            customBox
+          });
+        }
+      }
+    }
+  
+    return matchedBoxes;
+  };
+  
+  const isOverlapping = (box1: faceapi.Box, box2: number[]) => {
+    const [x1, y1, w1, h1] = [box1.x, box1.y, box1.width, box1.height];
+    const [x2, y2, w2, h2] = box2;
+  
+    // Check if there is any overlap
+    return !(x2 + w2 < x1 || x2 > x1 + w1 || y2 + h2 < y1 || y2 > y1 + h1);
+  };
+  
 
-  const drawFaces = (canvas: HTMLCanvasElement, faceData: FaceApiResult[], yoloData: any[], fps: string) => {
+  const drawFaces = (canvas: HTMLCanvasElement, faceApiResults: FaceApiResult[], customModelResults: any[], fps: string) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'small-caps 12px "Segoe UI"';
+    ctx.font = 'small-caps 10px "Segoe UI"';
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
-
-    faceData.forEach((person) => {
+  
+    // Match bounding boxes
+    const matchedBoxes = matchBoundingBoxes(
+      faceApiResults.map((result) => result.detection.box),
+      customModelResults
+    );
+  
+    for (const match of matchedBoxes) {
+      const { faceApiBox, customBox } = match;
+  
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'deepskyblue';
       ctx.fillStyle = 'deepskyblue';
       ctx.globalAlpha = 0.6;
       ctx.beginPath();
-      ctx.rect(person.detection.box.x, person.detection.box.y, person.detection.box.width, person.detection.box.height);
+      ctx.rect(faceApiBox.x, faceApiBox.y, faceApiBox.width, faceApiBox.height);
       ctx.stroke();
       ctx.globalAlpha = 1;
-
-      const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
+  
+      const expression = Object.entries(faceApiResults[0].expressions).sort((a, b) => b[1] - a[1]);
+  
+      const newPrediction: Prediction = {
+        id: predictions.length + 1,
+        userId: customBox.userId, // From custom model
+        expression: expression[0][0], // From faceapi
+        gender: faceApiResults[0].gender, // From faceapi
+        focus: customBox.class, // From custom model
+        confidence: customBox.confidence, // From custom model
+        time: new Date().toLocaleTimeString(),
+      };
+  
+      setPredictions((prev) => [...prev, newPrediction]);
+  
+      // Drawing additional information
       ctx.fillStyle = 'lightblue';
-      ctx.fillText(`Gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 15);
-      ctx.fillText(`Perasaan: ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 30);
-
-      yoloData.forEach((prediction: any) => {
-        if (prediction.class === 'person' && person.detection.box.x < prediction.box.x && person.detection.box.y < prediction.box.y) {
-          ctx.fillStyle = 'lightblue';
-          ctx.fillText(`User ID: ${prediction.userId}`, person.detection.box.x, person.detection.box.y + person.detection.box.height +10);
-        }
-      });
-    });
+      ctx.fillText(`gender: ${Math.round(100 * faceApiResults[0].genderProbability)}% ${faceApiResults[0].gender}`, faceApiBox.x, faceApiBox.y - 30);
+      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, faceApiBox.x, faceApiBox.y - 20);
+      ctx.fillText(`ketertarikan: ${customBox.class}`, faceApiBox.x, faceApiBox.y - 10);
+      ctx.fillText(`user_id: ${customBox.userId} Confidence: ${customBox.confidence}`, faceApiBox.x, faceApiBox.y + faceApiBox.height);
+    }
   };
+  
 
   const dataURLtoBlob = (dataurl: string) => {
     const arr = dataurl.split(',');
