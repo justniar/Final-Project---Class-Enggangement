@@ -6,6 +6,7 @@ import { Grid, Box, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
 import { Prediction } from '@/types/prediction';
+import axios from 'axios';
 
 const modelPath = '/models/';
 const minScore = 0.2;
@@ -41,9 +42,9 @@ interface FaceApiResult {
 let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 
 const Detection: React.FC = () => {
-  const [isWebcamActive, setIsWebcamActive] = useState(true);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isWebcamActive, setIsWebcamActive] = useState<boolean>(false);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -60,58 +61,36 @@ const Detection: React.FC = () => {
     await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
     console.log('Face API models loaded');
     optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
-    setupCamera();
   };
 
-  const setupCamera = () => {
+  const setupCamera = async () => {
     const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (!video || !canvas) return;
-
-    if (!navigator.mediaDevices) {
-      console.error('Camera Error: access not supported');
-      return;
-    }
-
-    const constraints: MediaStreamConstraints = {
-      audio: false,
-      video: {
-        facingMode: 'user',
-        width: window.innerWidth > window.innerHeight ? { ideal: window.innerWidth } : undefined,
-        height: window.innerWidth <= window.innerHeight ? { ideal: window.innerHeight } : undefined
-      }
-    };
-
-    navigator.mediaDevices.getUserMedia(constraints).then((mediaStream) => {
-      setStream(mediaStream);
-      video.srcObject = mediaStream;
-
-      video.onloadeddata = () => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+    if (video) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: 640, height: 480 }
+        });
+        video.srcObject = stream;
         video.play();
-        detectVideo(video, canvas);
-      };
-    }).catch((err) => {
-      console.error(`Camera Error: ${(err as Error).message || err}`);
-    });
-  };
+        detectVideo(video, canvasRef.current!); // Start face detection
+      } catch (error) {
+        console.error('Error accessing webcam:', error);
+      }
+    }
+  };  
 
   const detectVideo = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
-    if (!video || video.paused) return;
+    if (!video || video.paused || video.ended) return;
 
     const t0 = performance.now();
     try {
-      const faceapiResults = await faceapi
+      const result = await faceapi
         .detectAllFaces(video, optionsSSDMobileNet)
         .withFaceLandmarks()
         .withFaceExpressions()
         .withAgeAndGender();
 
-      const yoloResults = await fetchYOLOPredictions(video, canvas);
-
-      const faceApiData: FaceApiResult[] = faceapiResults.map((res) => ({
+      const faceApiResults: FaceApiResult[] = result.map((res) => ({
         detection: res.detection,
         expressions: res.expressions as unknown as { [key: string]: number },
         gender: res.gender,
@@ -123,84 +102,126 @@ const Detection: React.FC = () => {
           yaw: res.angle.yaw ?? 0,
         }
       }));
+      console.log("faceapi:", result)
 
-      const mergedData = mergeData(faceApiData, yoloResults, canvas);
+      const yoloResults = await predictWithYOLO(video);
       const fps = 1000 / (performance.now() - t0);
-      drawFaces(canvas, mergedData, fps.toLocaleString());
+      drawFaces(canvas, faceApiResults, yoloResults, fps.toLocaleString());
       requestAnimationFrame(() => detectVideo(video, canvas));
     } catch (err) {
       console.error(`Detect Error: ${JSON.stringify(err)}`);
     }
   };
 
-  const mergeData = (faceApiData: FaceApiResult[], yoloResults: any[], canvas: HTMLCanvasElement) => {
-    return yoloResults.map(yoloResult => {
-      const matchingFaceApiResult = faceApiData.find(faceApiResult => {
-        const box = faceApiResult.detection.box;
-        return box.x === yoloResult.box[0] && box.y === yoloResult.box[1] && box.width === yoloResult.box[2] && box.height === yoloResult.box[3];
-      });
-
-      return {
-        ...matchingFaceApiResult,
-        user_id: yoloResult.userId,
-        focus: yoloResult.class,
-        confidence: yoloResult.confidence
-      };
-    });
-  };
-
-  const fetchYOLOPredictions = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+  const predictWithYOLO = async (video: HTMLVideoElement) => {
     const formData = new FormData();
-    const blob = dataURLtoBlob(canvas.toDataURL());
+    const canvasSnapshot = document.createElement('canvas');
+    const ctx = canvasSnapshot.getContext('2d');
+    if (!ctx) return [];
+    canvasSnapshot.width = video.videoWidth;
+    canvasSnapshot.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+    const blob = dataURLtoBlob(canvasSnapshot.toDataURL());
     formData.append('frame', blob, 'snapshot.png');
 
-    const response = await fetch('http://localhost:5000/predict', {
-      method: 'POST',
-      body: formData
+    const response = await axios.post('http://localhost:5000/predict', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    return response.json();
-  };
+    const predictions = response.data;
 
-  const drawFaces = (canvas: HTMLCanvasElement, data: any[], fps: string) => {
+    // Identify user for each detected face
+    // Identifikasi user untuk tiap muka yang terdeteksi
+    for (const prediction of predictions) {
+      const userFormData = new FormData();
+      userFormData.append('frame', blob, 'snapshot.png');
+
+      const userResponse = await axios.post('http://localhost:5000/identify-user', userFormData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      prediction.userId = userResponse.data.user_id;
+      prediction.confidence = userResponse.data.confidence;
+    }
+    console.log(predictions)
+    return predictions;
+  };
+  const matchBoundingBoxes = (faceApiBoxes: faceapi.Box[], customModelBoxes: any[]) => {
+    const matchedBoxes: any[] = [];
+  
+    for (const faceApiBox of faceApiBoxes) {
+      for (const customBox of customModelBoxes) {
+        const overlap = isOverlapping(faceApiBox, customBox.box);
+        if (overlap) {
+          matchedBoxes.push({
+            faceApiBox,
+            customBox
+          });
+        }
+      }
+    }
+  
+    return matchedBoxes;
+  };
+  
+  const isOverlapping = (box1: faceapi.Box, box2: number[]) => {
+    const [x1, y1, w1, h1] = [box1.x, box1.y, box1.width, box1.height];
+    const [x2, y2, w2, h2] = box2;
+  
+    // Check if there is any overlap
+    return !(x2 + w2 < x1 || x2 > x1 + w1 || y2 + h2 < y1 || y2 > y1 + h1);
+  };
+  
+
+  const drawFaces = (canvas: HTMLCanvasElement, faceApiResults: FaceApiResult[], customModelResults: any[], fps: string) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'small-caps 20px "Segoe UI"';
+    ctx.font = 'small-caps 10px "Segoe UI"';
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
-
-    for (const person of data) {
-      if (!person) continue;
-
+  
+    // Match bounding boxes
+    const matchedBoxes = matchBoundingBoxes(
+      faceApiResults.map((result) => result.detection.box),
+      customModelResults
+    );
+  
+    for (const match of matchedBoxes) {
+      const { faceApiBox, customBox } = match;
+  
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'deepskyblue';
       ctx.fillStyle = 'deepskyblue';
       ctx.globalAlpha = 0.6;
       ctx.beginPath();
-      ctx.rect(person.detection.box.x, person.detection.box.y, person.detection.box.width, person.detection.box.height);
+      ctx.rect(faceApiBox.x, faceApiBox.y, faceApiBox.width, faceApiBox.height);
       ctx.stroke();
       ctx.globalAlpha = 1;
-
-      const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
-      ctx.fillStyle = 'lightblue';
-      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 40);
-      ctx.fillText(`ekspresi: ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
-
-      ctx.fillText(`ketertarikan: ${person.focus}`, person.detection.box.x, person.detection.box.y);
-      ctx.fillText(`user_id: ${person.user_id} Confidence: ${person.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
-
+  
+      const expression = Object.entries(faceApiResults[0].expressions).sort((a, b) => b[1] - a[1]);
+  
       const newPrediction: Prediction = {
         id: predictions.length + 1,
-        userId: person.user_id,
-        expression: expression[0][0],
-        gender: person.gender,
-        focus: person.focus,
+        userId: customBox.userId, // From custom model
+        expression: expression[0][0], // From faceapi
+        gender: faceApiResults[0].gender, // From faceapi
+        focus: customBox.class, // From custom model
+        confidence: customBox.confidence, // From custom model
         time: new Date().toLocaleTimeString(),
       };
+  
       setPredictions((prev) => [...prev, newPrediction]);
+  
+      // Drawing additional information
+      ctx.fillStyle = 'lightblue';
+      ctx.fillText(`gender: ${Math.round(100 * faceApiResults[0].genderProbability)}% ${faceApiResults[0].gender}`, faceApiBox.x, faceApiBox.y - 30);
+      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, faceApiBox.x, faceApiBox.y - 20);
+      ctx.fillText(`ketertarikan: ${customBox.class}`, faceApiBox.x, faceApiBox.y - 10);
+      ctx.fillText(`user_id: ${customBox.userId} Confidence: ${customBox.confidence}`, faceApiBox.x, faceApiBox.y + faceApiBox.height);
     }
   };
+  
 
   const dataURLtoBlob = (dataurl: string) => {
     const arr = dataurl.split(',');
@@ -214,6 +235,25 @@ const Detection: React.FC = () => {
     }
 
     return new Blob([u8arr], { type: mime });
+  };
+
+  const handleBulkInsert = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/save-predictions', predictions, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status === 200) {
+        console.log('Predictions saved successfully');
+        setPredictions([]);
+      } else {
+        console.error('Failed to save predictions');
+      }
+    } catch (error) {
+      console.error('Error saving predictions:', error);
+    }
   };
 
   const handleSwitch = () => {
