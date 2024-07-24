@@ -96,7 +96,7 @@ const UploadDetection: React.FC = () => {
           yaw: res.angle.yaw ?? 0,
         }
       }));
-      console.log(result)
+      console.log("faceapi:", result)
 
       const yoloResults = await predictWithYOLO(video);
       const fps = 1000 / (performance.now() - t0);
@@ -161,14 +161,13 @@ const UploadDetection: React.FC = () => {
 
       const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
       ctx.fillStyle = 'lightblue';
-      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 15);
-      ctx.fillText(`Age: ${Math.round(person.detection.box.width)}`, person.detection.box.x, person.detection.box.y - 35);
-      ctx.fillText(`Emotion: ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 55);
+      ctx.fillText(`Gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 15);
+      ctx.fillText(`Perasaan: ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 30);
 
       yoloData.forEach((prediction: any) => {
         if (prediction.class === 'person' && person.detection.box.x < prediction.box.x && person.detection.box.y < prediction.box.y) {
           ctx.fillStyle = 'lightblue';
-          ctx.fillText(`User ID: ${prediction.userId}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
+          ctx.fillText(`User ID: ${prediction.userId}`, person.detection.box.x, person.detection.box.y + person.detection.box.height +10);
         }
       });
     });

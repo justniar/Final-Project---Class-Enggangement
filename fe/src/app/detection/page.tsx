@@ -103,13 +103,15 @@ const Detection: React.FC = () => {
 
     const t0 = performance.now();
     try {
-      const result = await faceapi
+      const faceapiResults = await faceapi
         .detectAllFaces(video, optionsSSDMobileNet)
         .withFaceLandmarks()
         .withFaceExpressions()
         .withAgeAndGender();
 
-      const faceApiResults: FaceApiResult[] = result.map((res) => ({
+      const yoloResults = await fetchYOLOPredictions(video, canvas);
+
+      const faceApiData: FaceApiResult[] = faceapiResults.map((res) => ({
         detection: res.detection,
         expressions: res.expressions as unknown as { [key: string]: number },
         gender: res.gender,
@@ -122,15 +124,45 @@ const Detection: React.FC = () => {
         }
       }));
 
+      const mergedData = mergeData(faceApiData, yoloResults, canvas);
       const fps = 1000 / (performance.now() - t0);
-      drawFaces(canvas, faceApiResults, fps.toLocaleString());
+      drawFaces(canvas, mergedData, fps.toLocaleString());
       requestAnimationFrame(() => detectVideo(video, canvas));
     } catch (err) {
       console.error(`Detect Error: ${JSON.stringify(err)}`);
     }
   };
 
-  const drawFaces = (canvas: HTMLCanvasElement, data: FaceApiResult[], fps: string) => {
+  const mergeData = (faceApiData: FaceApiResult[], yoloResults: any[], canvas: HTMLCanvasElement) => {
+    return yoloResults.map(yoloResult => {
+      const matchingFaceApiResult = faceApiData.find(faceApiResult => {
+        const box = faceApiResult.detection.box;
+        return box.x === yoloResult.box[0] && box.y === yoloResult.box[1] && box.width === yoloResult.box[2] && box.height === yoloResult.box[3];
+      });
+
+      return {
+        ...matchingFaceApiResult,
+        user_id: yoloResult.userId,
+        focus: yoloResult.class,
+        confidence: yoloResult.confidence
+      };
+    });
+  };
+
+  const fetchYOLOPredictions = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+    const formData = new FormData();
+    const blob = dataURLtoBlob(canvas.toDataURL());
+    formData.append('frame', blob, 'snapshot.png');
+
+    const response = await fetch('http://localhost:5000/predict', {
+      method: 'POST',
+      body: formData
+    });
+
+    return response.json();
+  };
+
+  const drawFaces = (canvas: HTMLCanvasElement, data: any[], fps: string) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -139,6 +171,8 @@ const Detection: React.FC = () => {
     ctx.fillText(`FPS: ${fps}`, 10, 25);
 
     for (const person of data) {
+      if (!person) continue;
+
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'deepskyblue';
       ctx.fillStyle = 'deepskyblue';
@@ -151,80 +185,20 @@ const Detection: React.FC = () => {
       const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
       ctx.fillStyle = 'lightblue';
       ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 40);
-      ctx.fillText(`expression: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
+      ctx.fillText(`ekspresi: ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
 
-      const predictResult = predict(person.detection.box, canvas);
-      ctx.fillText(`Interest: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
-      console.log(predictResult);
-
-      const identifyUser = predictUser(person.detection.box, canvas);
-      ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
-      console.log(identifyUser);
+      ctx.fillText(`ketertarikan: ${person.focus}`, person.detection.box.x, person.detection.box.y);
+      ctx.fillText(`user_id: ${person.user_id} Confidence: ${person.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
 
       const newPrediction: Prediction = {
         id: predictions.length + 1,
-        name: 'Unknown', // Replace with actual user identification logic if available
+        userId: person.user_id,
         expression: expression[0][0],
         gender: person.gender,
-        focus: predictResult.expression,
+        focus: person.focus,
         time: new Date().toLocaleTimeString(),
       };
       setPredictions((prev) => [...prev, newPrediction]);
-    }
-  };
-
-  const cropCanvas = (canvas: HTMLCanvasElement, box: faceapi.Box) => {
-    const croppedCanvas = document.createElement('canvas');
-    const ctx = croppedCanvas.getContext('2d');
-    croppedCanvas.width = box.width;
-    croppedCanvas.height = box.height;
-    ctx?.drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
-    return croppedCanvas;
-  };
-
-  const predict = (box: faceapi.Box, canvas: HTMLCanvasElement) => {
-    try {
-      const formData = new FormData();
-      const croppedCanvas = cropCanvas(canvas, box);
-      const blob = dataURLtoBlob(croppedCanvas.toDataURL());
-      formData.append('frame', blob, 'snapshot.png');
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://localhost:5000/predict', false);
-      xhr.send(formData);
-
-      if (xhr.status === 200) {
-        const response = JSON.parse(xhr.responseText);
-        return { expression: response[0].class };  // Adjust according to the new response structure
-      } else {
-        throw new Error('Predict API failed');
-      }
-    } catch (error) {
-      console.error('Error predicting:', error);
-      return { expression: 'unknown' };
-    }
-  };
-
-  const predictUser = (box: faceapi.Box, canvas: HTMLCanvasElement) => {
-    try {
-      const formData = new FormData();
-      const croppedCanvas = cropCanvas(canvas, box);
-      const blob = dataURLtoBlob(croppedCanvas.toDataURL());
-      formData.append('frame', blob, 'snapshot.png');
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://localhost:5000/identify-user', false);
-      xhr.send(formData);
-
-      if (xhr.status === 200) {
-        const response = JSON.parse(xhr.responseText);
-        return { user_id: response.user_id, confidence: response.confidence };
-      } else {
-        throw new Error('Identify User API failed');
-      }
-    } catch (error) {
-      console.error('Error identifying user:', error);
-      return { user_id: 'unknown', confidence: 0 };
     }
   };
 
