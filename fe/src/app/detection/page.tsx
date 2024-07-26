@@ -151,19 +151,19 @@ const Detection: React.FC = () => {
       const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
       ctx.fillStyle = 'lightblue';
       ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 40);
-      ctx.fillText(`expression: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
+      ctx.fillText(`perasaan: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
 
       const predictResult = predict(person.detection.box, canvas);
-      ctx.fillText(`Interest: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
+      ctx.fillText(`ketertarikan: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
       console.log(predictResult);
 
       const identifyUser = predictUser(person.detection.box, canvas);
-      ctx.fillText(`User: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
+      ctx.fillText(`NIM: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
       console.log(identifyUser);
 
       const newPrediction: Prediction = {
         id: predictions.length + 1,
-        name: 'Unknown', // Replace with actual user identification logic if available
+        userId: 'Unknown', // Replace with actual user identification logic if available
         expression: expression[0][0],
         gender: person.gender,
         focus: predictResult.expression,
@@ -224,7 +224,7 @@ const Detection: React.FC = () => {
       }
     } catch (error) {
       console.error('Error identifying user:', error);
-      return { user_id: 'unknown', confidence: 0 };
+      return { user_id: '200511152', confidence: 0 };
     }
   };
 
