@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Grid, Box, Card, Stack, Typography } from "@mui/material";
 // components
 import PageContainer from "@/components/container/PageContainer";
-import Logo from "@/components/layouts/shared/logo/Logo";
 import AuthLogin from "../auth/AuthLogin";
+import Image from "next/image";
 
 const Login2 = () => {
   return (
@@ -45,7 +45,12 @@ const Login2 = () => {
               sx={{ p: 4, zIndex: 1, width: "100%", maxWidth: "500px" }}
             >
               <Box display="flex" alignItems="center" justifyContent="center">
-                <Logo />
+              <Image
+                src="/images/logos/Asset1.png"
+                alt="Picture of the author"
+                width={200}
+                height={90}
+              />
               </Box>
               <AuthLogin
                 subtext={
@@ -55,7 +60,7 @@ const Login2 = () => {
                     color="textSecondary"
                     mb={1}
                   >
-                    Your Social Campaigns
+                    Masuk ke dalam sistem
                   </Typography>
                 }
                 subtitle={
@@ -70,7 +75,7 @@ const Login2 = () => {
                       variant="h6"
                       fontWeight="500"
                     >
-                      New to Modernize?
+                      Belum punya akun?
                     </Typography>
                     <Typography
                       component={Link}
@@ -81,7 +86,7 @@ const Login2 = () => {
                         color: "primary.main",
                       }}
                     >
-                      Create an account
+                      buat akun
                     </Typography>
                   </Stack>
                 }

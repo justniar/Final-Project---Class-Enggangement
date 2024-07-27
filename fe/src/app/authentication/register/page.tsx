@@ -3,8 +3,8 @@ import React from 'react';
 import { Grid, Box, Card, Typography, Stack } from '@mui/material';
 import Link from 'next/link';
 import PageContainer from '@/components/container/PageContainer';
-// import Logo from '@/components/layouts/shared/logo/Logo';
 import AuthRegister from '../auth/AuthRegister';
+import Image from 'next/image';
 
 const Register2 = () => (
     <PageContainer title="Register" description="this is Register page">
@@ -26,15 +26,15 @@ const Register2 = () => (
             <Grid container spacing={0} justifyContent="center" sx={{ height: "100vh" }}>
                 <Grid item xs={12} sm={12} lg={4} xl={3} display="flex" justifyContent="center" alignItems="center">
                     <Card elevation={9} sx={{ p: 4, zIndex: 1, width: "100%", maxWidth: "500px" }}>
-                        {/* <Box display="flex" alignItems="center" justifyContent="center">
-                            <Logo />
-                        </Box> */}
+                    <Box display="flex" alignItems="center" justifyContent="center">
+                        <Image
+                          src="/images/logos/Asset1.png"
+                          alt="Picture of the author"
+                          width={200}
+                          height={90}
+                        />
+                    </Box>
                         <AuthRegister
-                            subtext={
-                                <Typography variant="subtitle1" textAlign="center" color="textPrimary" mb={1}>
-                                    Daftar akun
-                                </Typography>
-                            }
                             subtitle={
                                 <Stack direction="row" justifyContent="center" spacing={1} mt={3}>
                                     <Typography color="textSecondary" variant="h6" fontWeight="400">
