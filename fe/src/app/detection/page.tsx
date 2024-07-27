@@ -199,24 +199,24 @@ const Detection: React.FC = () => {
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
+      const expression = Object.entries(match.expressions).sort((a, b) => b[1] - a[1]);
       ctx.fillStyle = 'lightblue';
-      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 40);
-      ctx.fillText(`perasaan: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
+      ctx.fillText(`gender: ${Math.round(100 * match.genderProbability)}% ${match.gender}`, match.detection.box.x, match.detection.box.y - 40);
+      ctx.fillText(`perasaan: ${expression[0][0]}`, match.detection.box.x, match.detection.box.y - 20);
 
-      const predictResult = predict(person.detection.box, canvas);
-      ctx.fillText(`ketertarikan: ${predictResult.expression}`, person.detection.box.x, person.detection.box.y);
+      const predictResult = predict(match.detection.box, canvas);
+      ctx.fillText(`ketertarikan: ${predictResult.expression}`, match.detection.box.x, match.detection.box.y);
       console.log(predictResult);
 
-      const identifyUser = predictUser(person.detection.box, canvas);
-      ctx.fillText(`NIM: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, person.detection.box.x, person.detection.box.y + person.detection.box.height + 20);
+      const identifyUser = predictUser(match.detection.box, canvas);
+      ctx.fillText(`NIM: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, match.detection.box.x, match.detection.box.y + match.detection.box.height + 20);
       console.log(identifyUser);
 
       const newPrediction: Prediction = {
         id: predictions.length + 1,
         userId: 'Unknown', // Replace with actual user identification logic if available
         expression: expression[0][0],
-        gender: person.gender,
+        gender: match.gender,
         focus: predictResult.expression,
         time: new Date().toLocaleTimeString(),
       };
