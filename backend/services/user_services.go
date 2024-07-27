@@ -10,10 +10,15 @@ import (
 type UserService interface {
 	Register(name, email, password, phone, role string) error
 	Login(email, password string) (*models.User, error)
+	GetAllUsers() ([]*models.User, error)
 }
 
 type userService struct {
 	userRepository repositories.UserRepository
+}
+
+func (s *userService) GetAllUsers() ([]*models.User, error) {
+	return s.userRepository.GetAllUsers()
 }
 
 func NewUserService(userRepository repositories.UserRepository) UserService {

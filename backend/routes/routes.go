@@ -13,7 +13,7 @@ import (
 func SetupRoutes(router *gin.Engine) {
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // Adjust to your frontend URL
+		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowMethods:     []string{"POST", "GET"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -30,4 +30,5 @@ func SetupRoutes(router *gin.Engine) {
 
 	router.POST("/register", userController.Register)
 	router.POST("/login", userController.Login)
+	router.GET("/users", userController.GetUsers)
 }

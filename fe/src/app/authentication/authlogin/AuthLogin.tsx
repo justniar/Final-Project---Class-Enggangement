@@ -31,14 +31,15 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
         email,
         password,
       });
-      const { redirectURL } = response.data;
+      const { token, redirectURL } = response.data;
+      localStorage.setItem('authToken', token); // Store token
       router.push(redirectURL); // Redirect based on role
     } catch (error) {
       console.error("Login failed:", error);
       // Handle login error (e.g., show an error message)
     }
   };
-
+  
   return (
     <>
       {title ? (
