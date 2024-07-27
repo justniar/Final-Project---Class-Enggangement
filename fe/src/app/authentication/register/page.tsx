@@ -3,7 +3,7 @@ import React from 'react';
 import { Grid, Box, Card, Typography, Stack } from '@mui/material';
 import Link from 'next/link';
 import PageContainer from '@/components/container/PageContainer';
-import AuthRegister from '../auth/AuthRegister';
+import AuthRegister from '../authregister/AuthRegister';
 import Image from 'next/image';
 
 const Register2 = () => (

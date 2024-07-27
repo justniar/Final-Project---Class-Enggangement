@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Grid, Box, Card, Stack, Typography } from "@mui/material";
 // components
 import PageContainer from "@/components/container/PageContainer";
-import AuthLogin from "../auth/AuthLogin";
+import AuthLogin from "../authlogin/AuthLogin";
 import Image from "next/image";
 
 const Login2 = () => {
@@ -45,12 +45,12 @@ const Login2 = () => {
               sx={{ p: 4, zIndex: 1, width: "100%", maxWidth: "500px" }}
             >
               <Box display="flex" alignItems="center" justifyContent="center">
-              <Image
-                src="/images/logos/Asset1.png"
-                alt="Picture of the author"
-                width={200}
-                height={90}
-              />
+                <Image
+                  src="/images/logos/Asset1.png"
+                  alt="Picture of the author"
+                  width={200}
+                  height={90}
+                />
               </Box>
               <AuthLogin
                 subtext={

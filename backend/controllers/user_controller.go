@@ -54,5 +54,19 @@ func (uc *UserController) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "user": user})
+	var redirectURL string
+	switch user.Role {
+	case "admin":
+		redirectURL = "/dashboard-admin"
+	case "dosen":
+		redirectURL = "/dashboard-user"
+	default:
+		redirectURL = "/"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":     "Login successful",
+		"user":        user,
+		"redirectURL": redirectURL,
+	})
 }
