@@ -109,7 +109,7 @@ def capture_image():
         # Find the number of existing files
         existing_files = [f for f in os.listdir(image_save_path) if f.startswith(f'{user_id}.') and f.endswith('.png')]
         if len(existing_files) >= 20:
-            return jsonify({'message': 'Maximum number of images captured'}), 400
+            return jsonify({'message': 'Maxi hmum number of images captured'}), 400
 
         # Find the next available index for the image filename
         if existing_files:

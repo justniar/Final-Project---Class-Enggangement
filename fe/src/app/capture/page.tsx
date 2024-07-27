@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
-import { Button, Box, Grid, TextField, Typography, Card, CardContent, CardMedia, CircularProgress } from '@mui/material';
+import { Button, Box, Grid, TextField, Typography, Card, CardContent, CardMedia, CircularProgress, Modal } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import axios from 'axios';
 
@@ -20,6 +20,7 @@ const CaptureDataset: React.FC = () => {
   const [captureCount, setCaptureCount] = useState<number>(0);
   const [userId, setUserId] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -161,11 +162,16 @@ const CaptureDataset: React.FC = () => {
       const response = await axios.post('http://localhost:5000/start-training');
       console.log(response.data.message);
       setCapturedImages([]);
+      setIsModalOpen(true);
     } catch (error) {
       console.error('Error starting training:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
   };
 
   return (
@@ -237,6 +243,28 @@ const CaptureDataset: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
+
+      <Modal open={isModalOpen} onClose={closeModal}>
+        <Box
+          position="absolute"
+          top="50%"
+          left="50%"
+          bgcolor="background.paper"
+          p={4}
+          borderRadius={1}
+          boxShadow={24}
+        >
+          <Typography variant="h6" gutterBottom>
+            Training Success
+          </Typography>
+          <Typography variant="body1">
+            Proses Training Berhasil
+          </Typography>
+          <Button onClick={closeModal} variant="contained" sx={{ mt: 2 }}>
+            Tutup
+          </Button>
+        </Box>
+      </Modal>
     </PageContainer>
   );
 };
