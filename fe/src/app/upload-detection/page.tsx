@@ -271,18 +271,19 @@ const UploadDetection: React.FC = () => {
     </div>
       <StudentEnggagement studentMonitoring={predictions} />
       
-      <Button variant="contained" color="primary" onClick={handleSaveSession}>
-        Simpan hasil deteksi
+      <Button variant="contained" color="primary" onClick={() => setIsModalOpen(true)}>
+         Simpan hasil deteksi
       </Button>
+
       {isModalOpen && (
         <SessionFormModal
           open={isModalOpen}
           onClose={handleModalClose}
           onSave={handleSaveSession}
-          data={predictions}
+          data={sessionData}
         />
       )}
-      {sessionData && <StudentEnggagement studentMonitoring={sessionData} />}
+      {sessionData}
   </PageContainer>
   );
 };

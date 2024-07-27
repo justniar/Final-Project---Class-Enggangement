@@ -16,6 +16,10 @@ import { Prediction } from '@/types/prediction';
   }
 
   const StudentEnggagement: React.FC<StudentEnggagementProps> = ({ studentMonitoring }) => {
+    if (!Array.isArray(studentMonitoring)) {
+      return <Typography variant="subtitle1">No data available</Typography>;
+    }
+    
     return (
       <DashboardCard title="Monitoring Siswa">
         <Box sx={{ overflow: 'auto', width: { xs: '280px', sm: 'auto' } }}>
