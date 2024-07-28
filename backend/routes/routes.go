@@ -31,5 +31,9 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/register", userController.Register)
 	router.POST("/login", userController.Login)
 	router.GET("/users", userController.GetUsers)
+	router.GET("/users/:id", userController.GetUserByID)
+	router.PUT("/users/:id", userController.UpdateUser)
+	router.DELETE("/users/:id", userController.DeleteUser)
+
 	router.POST("/save-predictions", controllers.SavePredictions)
 }
