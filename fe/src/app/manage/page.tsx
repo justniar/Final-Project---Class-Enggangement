@@ -4,7 +4,24 @@
 import { useState, useEffect } from 'react';
 import { getUsers, createUser, updateUser, deleteUser } from '../api/login/userServices';
 import { User } from '@/types/users';
-import { Container, Table, TableBody, TableCell, TableHead, TableRow, Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import {
+  Container,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Button,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Box,
+  IconButton,
+} from '@mui/material';
+import { Delete, Edit, EditAttributesRounded } from '@mui/icons-material';
+import { IconEyeEdit } from '@tabler/icons-react';
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -46,14 +63,22 @@ const AdminDashboard = () => {
     try {
       await deleteUser(id);
       console.log('User deleted successfully');
+      fetchUsers(); // Refresh the user list after deletion
     } catch (error) {
       console.error('Failed to delete user', error);
     }
   };
 
+  const roleColors = {
+    admin: '#EBF4F6', // Light red for admin
+    dosen: '#ccffcc', // Light green for dosen
+  };
+
   return (
     <Container>
-      <Button variant="contained" color="primary" onClick={() => handleOpen({})}>Add User</Button>
+      <Button variant="contained" color="primary" onClick={() => handleOpen({})}>
+        Add User
+      </Button>
       <Table>
         <TableHead>
           <TableRow>
@@ -66,16 +91,32 @@ const AdminDashboard = () => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {users.map(user => (
+          {users.map((user) => (
             <TableRow key={user.id}>
               <TableCell>{user.id}</TableCell>
               <TableCell>{user.name}</TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>{user.phone}</TableCell>
-              <TableCell>{user.role}</TableCell>
               <TableCell>
-                <Button onClick={() => handleOpen(user)}>Edit</Button>
-                <Button onClick={() => handleDeleteUser(user.id)}>Delete</Button>
+                <Box
+                  sx={{
+                    backgroundColor: user.role === 'admin' ? roleColors.admin : roleColors.dosen,
+                    borderRadius: '12px',
+                    padding: '4px 12px',
+                    display: 'inline-block',
+                    textAlign: 'center',
+                  }}
+                >
+                  {user.role}
+                </Box>
+              </TableCell>
+              <TableCell>
+                <IconButton onClick={() => handleOpen(user)}>
+                  <IconEyeEdit/>
+                </IconButton>
+                <IconButton onClick={() => handleDeleteUser(user.id)}>
+                  <Delete />
+                </IconButton>
               </TableCell>
             </TableRow>
           ))}

@@ -15,7 +15,7 @@ export const createUser = async (user: Partial<User>): Promise<User> => {
 };
 
 export const updateUser = async (id: number, user: Partial<User>): Promise<User> => {
-  const response = await axios.put(`${API_URL}/users/${id}`, user);
+  const response =  await axios.put(`${API_URL}/users/${id}`, user);
   return response.data;
 };
 
