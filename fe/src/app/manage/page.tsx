@@ -157,6 +157,13 @@ const ManageUser = () => {
             />
             <TextField
                 margin="dense"
+                label="password"
+                fullWidth
+                value={selectedUser?.password || ''}
+                onChange={(e) => setSelectedUser({ ...selectedUser, password: e.target.value })}
+            />
+            <TextField
+                margin="dense"
                 label="Phone"
                 fullWidth
                 value={selectedUser?.phone || ''}

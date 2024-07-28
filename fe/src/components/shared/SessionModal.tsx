@@ -12,7 +12,7 @@ interface SessionFormModalProps {
 
 const SessionFormModal: React.FC<SessionFormModalProps> = ({ open, onClose, onSave, data }) => {
   const [sessionDetails, setSessionDetails] = useState({
-    dosenId: '2',
+    dosenId: '8',
     mataKuliahId: '2',
     sessionDate: '2024-07-27'
   });
