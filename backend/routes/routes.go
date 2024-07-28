@@ -31,6 +31,7 @@ func SetupRoutes(router *gin.Engine) {
 	router.POST("/register", userController.Register)
 	router.POST("/login", userController.Login)
 	router.GET("/users", userController.GetUsers)
+	router.POST("/users", userController.Register)
 	router.GET("/users/:id", userController.GetUserByID)
 	router.PUT("/users/:id", userController.UpdateUser)
 	router.DELETE("/users/:id", userController.DeleteUser)

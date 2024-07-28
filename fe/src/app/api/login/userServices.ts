@@ -10,9 +10,19 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 export const createUser = async (user: Partial<User>): Promise<User> => {
-  const response = await axios.post(`${API_URL}/users`, user);
-  return response.data;
-};
+    try {
+      console.log('Creating user with data:', user);
+      const response = await axios.post(`${API_URL}/users`, user);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('Error creating user:', error.response?.data || error.message);
+      } else {
+        console.error('Unexpected error:', error);
+      }
+      throw error;
+    }
+  };
 
 export const updateUser = async (id: number, user: Partial<User>): Promise<User> => {
   const response =  await axios.put(`${API_URL}/users/${id}`, user);

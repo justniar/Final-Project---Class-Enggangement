@@ -24,7 +24,7 @@ import {
 import { Delete} from '@mui/icons-material';
 import { IconEyeEdit } from '@tabler/icons-react';
 
-const AdminDashboard = () => {
+const ManageUser = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<Partial<User> | null>(null);
   const [open, setOpen] = useState(false);
@@ -50,6 +50,7 @@ const AdminDashboard = () => {
 
   const handleSave = async () => {
     if (selectedUser) {
+      console.log('Saving user:', selectedUser);
       if (selectedUser.id) {
         await updateUser(selectedUser.id, selectedUser);
       } else {
@@ -59,6 +60,7 @@ const AdminDashboard = () => {
       fetchUsers();
     }
   };
+  
 
   const handleDeleteUser = async (id: number) => {
     try {
@@ -167,4 +169,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default ManageUser;
