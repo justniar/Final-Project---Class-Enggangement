@@ -19,7 +19,7 @@ export default function RootLayout({
       const token = localStorage.getItem('authToken'); // or use cookies
       
       if (!token) {
-        router.push('/login'); // Redirect to login if no token is found
+        router.push('authentication/login'); // Redirect to login if no token is found
       }
     };
 

@@ -40,6 +40,12 @@ const Menuitems = [
     icon: IconLayoutDashboard,
     href: "/capture",
   },
+  {
+    id: uniqueId(),
+    title: "Manage Data User",
+    icon: IconLayoutDashboard,
+    href: "/manage",
+  },
   // {
   //   navlabel: true,
   //   subheader: "Utilities",
