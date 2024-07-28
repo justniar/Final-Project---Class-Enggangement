@@ -23,6 +23,8 @@ import {
 } from '@mui/material';
 import { Delete} from '@mui/icons-material';
 import { IconEyeEdit } from '@tabler/icons-react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const ManageUser = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -34,8 +36,13 @@ const ManageUser = () => {
   }, []);
 
   const fetchUsers = async () => {
-    const data = await getUsers();
-    setUsers(data);
+    try {
+      const data = await getUsers();
+      setUsers(data);
+      toast.done('Fetch users')
+    } catch (error) {
+      toast.error('Failed to fetch users');
+    }
   };
 
   const handleOpen = (user: Partial<User> | null) => {
@@ -53,8 +60,10 @@ const ManageUser = () => {
       console.log('Saving user:', selectedUser);
       if (selectedUser.id) {
         await updateUser(selectedUser.id, selectedUser);
+        toast.success('User updated successfully');
       } else {
         await createUser(selectedUser);
+        toast.success('User created successfully');
       }
       handleClose();
       fetchUsers();
@@ -66,9 +75,11 @@ const ManageUser = () => {
     try {
       await deleteUser(id);
       console.log('User deleted successfully');
+      toast.error('User deleted successfully');
       fetchUsers(); // Refresh the user list after deletion
     } catch (error) {
-      console.error('Failed to delete user', error);
+        toast.error('Failed to delete user');
+        console.error('Failed to delete user', error);
     }
   };
 
@@ -164,6 +175,19 @@ const ManageUser = () => {
             <Button onClick={handleSave}>Save</Button>
             </DialogActions>
         </Dialog>
+
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+        />
         </Container>
     </Typography>
   );
