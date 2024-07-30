@@ -1,11 +1,12 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
-import { Grid, Button, Box } from '@mui/material';
+import { Grid, Button } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 import StudentEnggagement from '@/components/monitoring/StudentEnggagement';
 import { Prediction } from '@/types/prediction';
 import axios from 'axios';
+import SessionFormModal from '@/components/shared/SessionModal';
 
 const modelPath = '/models/';
 const minScore = 0.2;
@@ -29,6 +30,8 @@ let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 const UploadDetection: React.FC = () => {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [sessionData, setSessionData] = useState<any>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -231,23 +234,14 @@ const UploadDetection: React.FC = () => {
     return new Blob([u8arr], { type: mime });
   };
 
-  const handleBulkInsert = async () => {
-    try {
-      const response = await axios.post('http://localhost:5000/save-predictions', predictions, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  const handleSaveSession = (session: any) => {
+    setSessionData(session); // Store session data
+    setIsModalOpen(false); // Close the modal
+  };
+  
 
-      if (response.status === 200) {
-        console.log('Predictions saved successfully');
-        setPredictions([]);
-      } else {
-        console.error('Failed to save predictions');
-      }
-    } catch (error) {
-      console.error('Error saving predictions:', error);
-    }
+  const handleModalClose = () => {
+    setIsModalOpen(false);
   };
 
   return (
@@ -273,11 +267,23 @@ const UploadDetection: React.FC = () => {
           </div>
         </Grid>
       </Grid>
+      
     </div>
-    <StudentEnggagement studentMonitoring={predictions} />
-    <Button variant="contained" onClick={handleBulkInsert}>
-      Simpan hasil deteksi
-    </Button>
+      <StudentEnggagement studentMonitoring={predictions} />
+      
+      <Button variant="contained" color="primary" onClick={() => setIsModalOpen(true)}>
+         Simpan hasil deteksi
+      </Button>
+
+      {isModalOpen && (
+        <SessionFormModal
+          open={isModalOpen}
+          onClose={handleModalClose}
+          onSave={handleSaveSession}
+          data={sessionData}
+        />
+      )}
+      {sessionData}
   </PageContainer>
   );
 };

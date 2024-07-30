@@ -198,87 +198,30 @@ const Detection: React.FC = () => {
       ctx.rect(faceApiBox.x, faceApiBox.y, faceApiBox.width, faceApiBox.height);
       ctx.stroke();
       ctx.globalAlpha = 1;
-
-      const expression = Object.entries(match.expressions).sort((a, b) => b[1] - a[1]);
-      ctx.fillStyle = 'lightblue';
-      ctx.fillText(`gender: ${Math.round(100 * match.genderProbability)}% ${match.gender}`, match.detection.box.x, match.detection.box.y - 40);
-      ctx.fillText(`perasaan: ${expression[0][0]}`, match.detection.box.x, match.detection.box.y - 20);
-
-      const predictResult = predict(match.detection.box, canvas);
-      ctx.fillText(`ketertarikan: ${predictResult.expression}`, match.detection.box.x, match.detection.box.y);
-      console.log(predictResult);
-
-      const identifyUser = predictUser(match.detection.box, canvas);
-      ctx.fillText(`NIM: ${identifyUser.user_id} Confidence: ${identifyUser.confidence}`, match.detection.box.x, match.detection.box.y + match.detection.box.height + 20);
-      console.log(identifyUser);
-
+  
+      const expression = Object.entries(faceApiResults[0].expressions).sort((a, b) => b[1] - a[1]);
+  
       const newPrediction: Prediction = {
         id: predictions.length + 1,
-        userId: 'Unknown', // Replace with actual user identification logic if available
-        expression: expression[0][0],
-        gender: match.gender,
-        focus: predictResult.expression,
+        userId: customBox.userId, // From custom model
+        expression: expression[0][0], // From faceapi
+        gender: faceApiResults[0].gender, // From faceapi
+        focus: customBox.class, // From custom model
+        confidence: customBox.confidence, // From custom model
         time: new Date().toLocaleTimeString(),
       };
   
       setPredictions((prev) => [...prev, newPrediction]);
+  
+      // Drawing additional information
+      ctx.fillStyle = 'lightblue';
+      ctx.fillText(`gender: ${Math.round(100 * faceApiResults[0].genderProbability)}% ${faceApiResults[0].gender}`, faceApiBox.x, faceApiBox.y - 30);
+      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, faceApiBox.x, faceApiBox.y - 20);
+      ctx.fillText(`ketertarikan: ${customBox.class}`, faceApiBox.x, faceApiBox.y - 10);
+      ctx.fillText(`user_id: ${customBox.userId} Confidence: ${customBox.confidence}`, faceApiBox.x, faceApiBox.y + faceApiBox.height);
     }
   };
-
-  const cropCanvas = (canvas: HTMLCanvasElement, box: faceapi.Box) => {
-    const croppedCanvas = document.createElement('canvas');
-    const ctx = croppedCanvas.getContext('2d');
-    croppedCanvas.width = box.width;
-    croppedCanvas.height = box.height;
-    ctx?.drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height);
-    return croppedCanvas;
-  };
-
-  const predict = (box: faceapi.Box, canvas: HTMLCanvasElement) => {
-    try {
-      const formData = new FormData();
-      const croppedCanvas = cropCanvas(canvas, box);
-      const blob = dataURLtoBlob(croppedCanvas.toDataURL());
-      formData.append('frame', blob, 'snapshot.png');
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://localhost:5000/predict', false);
-      xhr.send(formData);
-
-      if (xhr.status === 200) {
-        const response = JSON.parse(xhr.responseText);
-        return { expression: response[0].class };  // Adjust according to the new response structure
-      } else {
-        throw new Error('Predict API failed');
-      }
-    } catch (error) {
-      console.error('Error predicting:', error);
-      return { expression: 'unknown' };
-    }
-  };
-
-  const predictUser = (box: faceapi.Box, canvas: HTMLCanvasElement) => {
-    try {
-      const formData = new FormData();
-      const croppedCanvas = cropCanvas(canvas, box);
-      const blob = dataURLtoBlob(croppedCanvas.toDataURL());
-      formData.append('frame', blob, 'snapshot.png');
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', 'http://localhost:5000/identify-user', false);
-      xhr.send(formData);
-
-      if (xhr.status === 200) {
-        const response = JSON.parse(xhr.responseText);
-        return { user_id: response.user_id, confidence: response.confidence };
-      } else {
-        throw new Error('Identify User API failed');
-      }
-    } catch (error) {
-      console.error('Error identifying user:', error);
-      return { user_id: '200511152', confidence: 0 };
-    }
-  };
+  
 
   const dataURLtoBlob = (dataurl: string) => {
     const arr = dataurl.split(',');
