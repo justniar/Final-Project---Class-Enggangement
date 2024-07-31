@@ -15,8 +15,9 @@ const AuthRegister: React.FC<AuthRegisterProps> = ({ title, subtitle, subtext })
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        phone: '',
+        password: '',
         role: '',
+        phone: '',
     });
     const [modalOpen, setModalOpen] = useState(false);
 
@@ -66,12 +67,16 @@ const AuthRegister: React.FC<AuthRegisterProps> = ({ title, subtitle, subtext })
                         <TextField id="email" variant="outlined" fullWidth value={formData.email} onChange={handleChange} />
                     </Grid>
                     <Grid item xs={6}>
-                        <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="phone" mb="5px">Phone</Typography>
-                        <TextField id="phone" variant="outlined" fullWidth value={formData.phone} onChange={handleChange} />
+                        <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="password" mb="5px">Password</Typography>
+                        <TextField id="password" variant="password" fullWidth value={formData.password} onChange={handleChange} />
                     </Grid>
                     <Grid item xs={6}>
                         <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="role" mb="5px">Role</Typography>
                         <TextField id="role" variant="outlined" fullWidth value={formData.role} onChange={handleChange} />
+                    </Grid>
+                    <Grid item xs={6}>
+                        <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="phone" mb="5px">Phone</Typography>
+                        <TextField id="phone" variant="outlined" fullWidth value={formData.phone} onChange={handleChange} />
                     </Grid>
                 </Grid>
                 <Button color="primary" variant="contained" size="large" fullWidth onClick={handleSubmit}>
