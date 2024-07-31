@@ -60,7 +60,7 @@ const TingkatFokus = () => {
       },
     ],
   };
-  const seriescolumnchart: any = [38, 40, 25];
+  const seriescolumnchart: any = [38, 40];
 
   return (
     <DashboardCard title="Tingkat Fokus">
@@ -87,7 +87,7 @@ const TingkatFokus = () => {
                 sx={{ width: 9, height: 9, bgcolor: primary, svg: { display: 'none' } }}
               ></Avatar>
               <Typography variant="subtitle2" color="textSecondary">
-                2024
+                Tertarik
               </Typography>
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
@@ -95,7 +95,7 @@ const TingkatFokus = () => {
                 sx={{ width: 9, height: 9, bgcolor: primarylight, svg: { display: 'none' } }}
               ></Avatar>
               <Typography variant="subtitle2" color="textSecondary">
-                2023
+                Tidak Tertarik
               </Typography>
             </Stack>
           </Stack>

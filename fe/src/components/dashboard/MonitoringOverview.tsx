@@ -100,7 +100,7 @@ const MonitoringOverview = () => {
     const seriescolumnchart: any = [
         {
             name: 'Hasil monitoring bulan ini',
-            data: seriesData,
+            data: seriesData
         }
     ];
 

@@ -18,7 +18,7 @@ const DashboardUser = () => {
           </Grid>
           <Grid item xs={12} lg={4}>
             <Grid container spacing={3}>
-              <Grid item xs={12}>
+              <Grid item xs={12} mt={1}>
                 <TingkatFokus />
               </Grid>
               <Grid item xs={12}>

@@ -38,4 +38,5 @@ func SetupRoutes(router *gin.Engine) {
 
 	router.POST("/save-predictions", controllers.SavePredictions)
 	router.GET("/monitoring/count", controllers.GetMonitoringRecordsCount)
+	router.GET("/monitoring/focus", controllers.GetTertarikAndTidakTertarikCounts)
 }
