@@ -71,3 +71,13 @@ func SavePredictions(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Predictions saved successfully"})
 }
+
+// GetMonitoringRecordsCount retrieves the count of each 'ketertarikan' category
+func GetMonitoringRecordsCount(c *gin.Context) {
+	counts, err := services.GetMonitoringRecordsCount()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch monitoring records count", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": counts})
+}

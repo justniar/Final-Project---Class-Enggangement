@@ -6,7 +6,7 @@ import SesiKuliah from '@/components/dashboard/SesiKuliah';
 import PerformaPendidik from '@/components/dashboard/PerformaPendidik';
 import TingkatFokus from '@/components/dashboard/TingkatFokus';
 import Keefektifan from '@/components/dashboard/Keefektifan';
-import MonitoringOverview from '@/components/dashboard/SalesOverview';
+import MonitoringOverview from '@/components/dashboard/MonitoringOverview';
 
 const DashboardUser = () => {
   return (

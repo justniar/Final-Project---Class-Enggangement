@@ -24,3 +24,8 @@ func SaveMonitoringRecords(records []models.MonitoringRecord) error {
 	}
 	return nil
 }
+
+// GetMonitoringRecordsCount fetches the count of each 'ketertarikan' category from the repository
+func GetMonitoringRecordsCount() (map[string]int, error) {
+	return repositories.GetMonitoringRecordsCount()
+}

@@ -1,19 +1,39 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Select, MenuItem } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import DashboardCard from '@/components/shared/DashboardCard';
 import dynamic from "next/dynamic";
+import axios from 'axios';
+
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
+const API_URL = 'http://localhost:8080';
 
 const MonitoringOverview = () => {
-
-    // select
-    const [month, setMonth] = React.useState('1');
+    const [month, setMonth] = useState('1');
+    const [seriesData, setSeriesData] = useState([0, 0, 0, 0, 0, 0]);
 
     const handleChange = (event: any) => {
         setMonth(event.target.value);
     };
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await axios.get(`${API_URL}/monitoring/count`);
+                const data = response.data.data;
+
+                const categories = ['bingung', 'bosan', 'fokus', 'frustasi', 'mengantuk', 'tidak-fokus'];
+                const newSeriesData = categories.map(category => data[category] || 0);
+                
+                setSeriesData(newSeriesData);
+            } catch (error) {
+                console.error('Failed to fetch monitoring records count:', error);
+            }
+        };
+
+        fetchData();
+    }, []);
 
     // chart color
     const theme = useTheme();
@@ -42,13 +62,12 @@ const MonitoringOverview = () => {
                 borderRadiusWhenStacked: 'all',
             },
         },
-
         stroke: {
             show: true,
             width: 5,
             lineCap: "butt",
             colors: ["transparent"],
-          },
+        },
         dataLabels: {
             enabled: false,
         },
@@ -80,13 +99,12 @@ const MonitoringOverview = () => {
     };
     const seriescolumnchart: any = [
         {
-            name: 'Hasil monitoring hari ini',
-            data: [355, 390, 300, 350, 390, 180],
+            name: 'Hasil monitoring bulan ini',
+            data: seriesData,
         }
     ];
 
     return (
-
         <DashboardCard title="Monitoring" action={
             <Select
                 labelId="month-dd"
@@ -95,16 +113,17 @@ const MonitoringOverview = () => {
                 size="small"
                 onChange={handleChange}
             >
-                <MenuItem value={1}>March 2023</MenuItem>
-                <MenuItem value={2}>April 2023</MenuItem>
-                <MenuItem value={3}>May 2023</MenuItem>
+                <MenuItem value={1}>March 2024</MenuItem>
+                <MenuItem value={2}>April 2024</MenuItem>
+                <MenuItem value={3}>May 2024</MenuItem>
             </Select>
         }>
             <Chart
                 options={optionscolumnchart}
                 series={seriescolumnchart}
                 type="bar"
-                height={370} width={"100%"}
+                height={370}
+                width={"100%"}
             />
         </DashboardCard>
     );
