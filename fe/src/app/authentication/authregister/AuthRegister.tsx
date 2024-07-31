@@ -68,7 +68,7 @@ const AuthRegister: React.FC<AuthRegisterProps> = ({ title, subtitle, subtext })
                     </Grid>
                     <Grid item xs={6}>
                         <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="password" mb="5px">Password</Typography>
-                        <TextField id="password" variant="password" fullWidth value={formData.password} onChange={handleChange} />
+                        <TextField id="password" variant="outlined" fullWidth value={formData.password} onChange={handleChange}  type="password"  />
                     </Grid>
                     <Grid item xs={6}>
                         <Typography variant="subtitle1" fontWeight={600} component="label" htmlFor="role" mb="5px">Role</Typography>
