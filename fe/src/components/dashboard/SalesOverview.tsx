@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 
-const SalesOverview = () => {
+const MonitoringOverview = () => {
 
     // select
     const [month, setMonth] = React.useState('1');
@@ -80,13 +80,9 @@ const SalesOverview = () => {
     };
     const seriescolumnchart: any = [
         {
-            name: 'Eanings this month',
+            name: 'Hasil monitoring hari ini',
             data: [355, 390, 300, 350, 390, 180],
-        },
-        {
-            name: 'Expense this month',
-            data: [280, 250, 325, 215, 250, 310],
-        },
+        }
     ];
 
     return (
@@ -114,4 +110,4 @@ const SalesOverview = () => {
     );
 };
 
-export default SalesOverview;
+export default MonitoringOverview;

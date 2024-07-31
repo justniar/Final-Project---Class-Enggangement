@@ -15,7 +15,6 @@ func SavePredictions(c *gin.Context) {
 		MataKuliahID     int       `json:"mataKuliah_id"`
 		SessionDate      time.Time `json:"session_date"`
 		MonitoringRecord []struct {
-			ID         int    `json:"monitoring_records_id"`
 			UserID     string `json:"nim"`
 			Expression string `json:"ekspresi"`
 			Gender     string `json:"gender"`

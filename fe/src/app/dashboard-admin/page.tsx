@@ -28,15 +28,9 @@ const DashboardAdmin = () => {
   return (
     <PageContainer title="Dashboard" description="this is Dashboard">
       <Box>
-        {userName && (
-            <Typography variant="h5" mb={3}>
-              Selamat datang, {userName}!
-            </Typography>
-          )}
-        
         <Grid container spacing={3}>
           <Grid item xs={12} lg={8}>
-            <SalesOverview />
+            <MonitoringOverview />
           </Grid>
           <Grid item xs={12} lg={4}>
             <Grid container spacing={3}>
@@ -54,9 +48,7 @@ const DashboardAdmin = () => {
           <Grid item xs={12} lg={8}>
             <PerformaPendidik/>
           </Grid>
-          <Grid item xs={12}>
-            <Blog />
-          </Grid>
+          
         </Grid>
       </Box>
     </PageContainer>

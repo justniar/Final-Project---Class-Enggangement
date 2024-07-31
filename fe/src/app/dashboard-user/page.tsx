@@ -2,12 +2,11 @@
 import { Grid, Box } from '@mui/material';
 import PageContainer from '@/components/container/PageContainer';
 // components
-import SalesOverview from '@/components/dashboard/SalesOverview';
-import Blog from '@/components/dashboard/Blog';
 import SesiKuliah from '@/components/dashboard/SesiKuliah';
 import PerformaPendidik from '@/components/dashboard/PerformaPendidik';
 import TingkatFokus from '@/components/dashboard/TingkatFokus';
 import Keefektifan from '@/components/dashboard/Keefektifan';
+import MonitoringOverview from '@/components/dashboard/SalesOverview';
 
 const DashboardUser = () => {
   return (
@@ -15,7 +14,7 @@ const DashboardUser = () => {
       <Box>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={8}>
-            <SalesOverview />
+            <MonitoringOverview />
           </Grid>
           <Grid item xs={12} lg={4}>
             <Grid container spacing={3}>
