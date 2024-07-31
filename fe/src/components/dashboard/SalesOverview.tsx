@@ -68,7 +68,7 @@ const SalesOverview = () => {
             tickAmount: 4,
         },
         xaxis: {
-            categories: ['16/08', '17/08', '18/08', '19/08', '20/08', '21/08', '22/08', '23/08'],
+            categories: ['bingung', 'bosan', 'fokus', 'frustasi', 'mengantuk', 'tidak-fokus'],
             axisBorder: {
                 show: false,
             },
@@ -81,11 +81,11 @@ const SalesOverview = () => {
     const seriescolumnchart: any = [
         {
             name: 'Eanings this month',
-            data: [355, 390, 300, 350, 390, 180, 355, 390],
+            data: [355, 390, 300, 350, 390, 180],
         },
         {
             name: 'Expense this month',
-            data: [280, 250, 325, 215, 250, 310, 280, 250],
+            data: [280, 250, 325, 215, 250, 310],
         },
     ];
 
