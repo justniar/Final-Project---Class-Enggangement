@@ -1,11 +1,13 @@
-
 import dynamic from "next/dynamic";
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 import { useTheme } from '@mui/material/styles';
 import { Grid, Stack, Typography, Avatar } from '@mui/material';
 import { IconArrowUpLeft } from '@tabler/icons-react';
-
 import DashboardCard from '@/components/shared/DashboardCard';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:8080';
 
 const TingkatFokus = () => {
   // chart color
@@ -14,7 +16,10 @@ const TingkatFokus = () => {
   const primarylight = '#ecf2ff';
   const successlight = theme.palette.success.light;
 
-  // chart
+  // state for chart data
+  const [chartData, setChartData] = useState({ tertarik: 0, tidakTertarik: 0 });
+
+  // chart options
   const optionscolumnchart: any = {
     chart: {
       type: 'donut',
@@ -60,7 +65,28 @@ const TingkatFokus = () => {
       },
     ],
   };
-  const seriescolumnchart: any = [38, 40];
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/monitoring/focus`);
+        console.log("API Response:", response.data);
+        setChartData(response.data);
+      } catch (error) {
+        console.error("Failed to fetch data", error);
+        setChartData({ tertarik: 0, tidakTertarik: 0 });
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Chart data series
+  const seriescolumnchart: any = [
+    chartData.tertarik || 0,
+    chartData.tidakTertarik || 0,
+  ];
 
   return (
     <DashboardCard title="Tingkat Fokus">
@@ -68,7 +94,7 @@ const TingkatFokus = () => {
         {/* column */}
         <Grid item xs={7} sm={7}>
           <Typography variant="h3" fontWeight="700">
-            36,358
+            {chartData.tertarik + chartData.tidakTertarik}
           </Typography>
           <Stack direction="row" spacing={1} mt={1} alignItems="center">
             <Avatar sx={{ bgcolor: successlight, width: 27, height: 27 }}>
