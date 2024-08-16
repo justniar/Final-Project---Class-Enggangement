@@ -43,3 +43,43 @@ func FindSessionID(mataKuliahID int, sessionDate time.Time) (int, error) {
 	}
 	return sessionID, nil
 }
+
+// func GetAllMonitoringRecords() ([]models.MonitoringRecord, error) {
+// 	rows, err := config.DB.Query("SELECT * FROM MonitoringRecords")
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+
+// 	var records []models.MonitoringRecord
+// 	for rows.Next() {
+// 		var record models.MonitoringRecord
+// 		if err := rows.Scan(&record.ID, &record.NIM, &record.Ekspresi, &record.Gender, &record.Ketertarikan, &record.WaktuTercatat, &record.SessionId); err != nil {
+// 			return nil, err
+// 		}
+// 		records = append(records, record)
+// 	}
+
+// 	return records, nil
+// }
+
+// GetMonitoringRecordsCount retrieves the count of each 'ketertarikan' category from the database
+func GetMonitoringRecordsCount() (map[string]int, error) {
+	rows, err := config.DB.Query("SELECT ketertarikan, COUNT(*) FROM MonitoringRecords GROUP BY ketertarikan")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int)
+	for rows.Next() {
+		var ketertarikan string
+		var count int
+		if err := rows.Scan(&ketertarikan, &count); err != nil {
+			return nil, err
+		}
+		counts[ketertarikan] = count
+	}
+
+	return counts, nil
+}

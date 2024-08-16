@@ -15,7 +15,6 @@ func SavePredictions(c *gin.Context) {
 		MataKuliahID     int       `json:"mataKuliah_id"`
 		SessionDate      time.Time `json:"session_date"`
 		MonitoringRecord []struct {
-			ID         int    `json:"monitoring_records_id"`
 			UserID     string `json:"nim"`
 			Expression string `json:"ekspresi"`
 			Gender     string `json:"gender"`
@@ -71,4 +70,51 @@ func SavePredictions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Predictions saved successfully"})
+}
+
+// GetMonitoringRecordsCount retrieves the count of each 'ketertarikan' category
+func GetMonitoringRecordsCount(c *gin.Context) {
+	counts, err := services.GetMonitoringRecordsCount()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch monitoring records count", "details": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": counts})
+}
+
+// GetTertarikAndTidakTertarikCounts retrieves the count of 'tertarik' and 'tidak tertarik' categories
+func GetTertarikAndTidakTertarikCounts(c *gin.Context) {
+	counts, err := services.GetMonitoringRecordsCount()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch monitoring records count", "details": err.Error()})
+		return
+	}
+
+	tertarikCategories := map[string]bool{
+		"bingung":  true,
+		"fokus":    true,
+		"frustasi": true,
+	}
+
+	tidakTertarikCategories := map[string]bool{
+		"bosan":       true,
+		"mengantuk":   true,
+		"tidak-fokus": true,
+	}
+
+	tertarikCount := 0
+	tidakTertarikCount := 0
+
+	for category, count := range counts {
+		if tertarikCategories[category] {
+			tertarikCount += count
+		} else if tidakTertarikCategories[category] {
+			tidakTertarikCount += count
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"tertarik":       tertarikCount,
+		"tidak_tertarik": tidakTertarikCount,
+	})
 }

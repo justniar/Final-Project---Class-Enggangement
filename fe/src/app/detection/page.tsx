@@ -28,7 +28,6 @@ interface DetectionBox {
 interface FaceApiResult {
   detection: faceapi.FaceDetection;
   expressions: { [key: string]: number };
-  // age: number;
   gender: string;
   genderProbability: number;
   landmarks: faceapi.FaceLandmarks68;
@@ -42,9 +41,9 @@ interface FaceApiResult {
 let optionsSSDMobileNet: faceapi.SsdMobilenetv1Options;
 
 const Detection: React.FC = () => {
-  const [isWebcamActive, setIsWebcamActive] = useState<boolean>(false);
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [isWebcamActive, setIsWebcamActive] = useState(true);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,26 +60,40 @@ const Detection: React.FC = () => {
     await faceapi.nets.faceExpressionNet.loadFromUri(modelPath);
     console.log('Face API models loaded');
     optionsSSDMobileNet = new faceapi.SsdMobilenetv1Options({ minConfidence: minScore, maxResults });
+    setupCamera();
   };
 
-  const setupCamera = async () => {
+  const setupCamera = () => {
     const video = videoRef.current;
-    if (video) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'user', width: 640, height: 480 }
-        });
-        video.srcObject = stream;
-        video.play();
-        detectVideo(video, canvasRef.current!); // Start face detection
-      } catch (error) {
-        console.error('Error accessing webcam:', error);
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas) return;
+
+    const constraints: MediaStreamConstraints = {
+      audio: false,
+      video: {
+        facingMode: 'user',
+        width: window.innerWidth > window.innerHeight ? { ideal: window.innerWidth } : undefined,
+        height: window.innerWidth <= window.innerHeight ? { ideal: window.innerHeight } : undefined
       }
-    }
-  };  
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then((mediaStream) => {
+        setStream(mediaStream);
+        video.srcObject = mediaStream;
+        video.onloadeddata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          video.play();
+          detectVideo(video, canvas);
+        };
+      })
+      .catch((err) => console.error(`Camera Error: ${(err as Error).message || err}`));
+  };
 
   const detectVideo = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
-    if (!video || video.paused || video.ended) return;
+    if (!video || video.paused) return;
 
     const t0 = performance.now();
     try {
@@ -102,11 +115,21 @@ const Detection: React.FC = () => {
           yaw: res.angle.yaw ?? 0,
         }
       }));
-      console.log("faceapi:", result)
 
       const yoloResults = await predictWithYOLO(video);
       const fps = 1000 / (performance.now() - t0);
       drawFaces(canvas, faceApiResults, yoloResults, fps.toLocaleString());
+
+      const newPredictions: Prediction[] = yoloResults.map((result: any) => ({
+        userId: result.userId,
+        expression: result.expression,
+        time: new Date().toLocaleTimeString(),
+        gender: faceApiResults[0]?.gender || 'unknown',
+        focus: result.expression // Assuming focus is mapped to expression
+      }));
+
+      setPredictions(newPredictions);
+      
       requestAnimationFrame(() => detectVideo(video, canvas));
     } catch (err) {
       console.error(`Detect Error: ${JSON.stringify(err)}`);
@@ -114,64 +137,40 @@ const Detection: React.FC = () => {
   };
 
   const predictWithYOLO = async (video: HTMLVideoElement) => {
-    const formData = new FormData();
-    const canvasSnapshot = document.createElement('canvas');
-    const ctx = canvasSnapshot.getContext('2d');
-    if (!ctx) return [];
-    canvasSnapshot.width = video.videoWidth;
-    canvasSnapshot.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-    const blob = dataURLtoBlob(canvasSnapshot.toDataURL());
-    formData.append('frame', blob, 'snapshot.png');
+    try {
+      const canvasSnapshot = document.createElement('canvas');
+      const ctx = canvasSnapshot.getContext('2d');
+      if (!ctx) return [];
+      canvasSnapshot.width = video.videoWidth;
+      canvasSnapshot.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
 
-    const response = await axios.post('http://localhost:5000/predict', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+      const formData = new FormData();
+      formData.append('frame', dataURLtoBlob(canvasSnapshot.toDataURL()), 'snapshot.png');
 
-    const predictions = response.data;
-
-    // Identify user for each detected face
-    // Identifikasi user untuk tiap muka yang terdeteksi
-    for (const prediction of predictions) {
-      const userFormData = new FormData();
-      userFormData.append('frame', blob, 'snapshot.png');
-
-      const userResponse = await axios.post('http://localhost:5000/identify-user', userFormData, {
+      const response = await axios.post('http://localhost:5000/predict', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      prediction.userId = userResponse.data.user_id;
-      prediction.confidence = userResponse.data.confidence;
-    }
-    console.log(predictions)
-    return predictions;
-  };
-  const matchBoundingBoxes = (faceApiBoxes: faceapi.Box[], customModelBoxes: any[]) => {
-    const matchedBoxes: any[] = [];
-  
-    for (const faceApiBox of faceApiBoxes) {
-      for (const customBox of customModelBoxes) {
-        const overlap = isOverlapping(faceApiBox, customBox.box);
-        if (overlap) {
-          matchedBoxes.push({
-            faceApiBox,
-            customBox
-          });
-        }
+      const predictions = response.data;
+      for (const prediction of predictions) {
+        const userFormData = new FormData();
+        userFormData.append('frame', dataURLtoBlob(canvasSnapshot.toDataURL()), 'snapshot.png');
+
+        const userResponse = await axios.post('http://localhost:5000/identify-user', userFormData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        prediction.userId = userResponse.data.user_id;
+        prediction.confidence = userResponse.data.confidence;
       }
+
+      return predictions;
+    } catch (error) {
+      console.error('Error predicting:', error);
+      return [];
     }
-  
-    return matchedBoxes;
   };
-  
-  const isOverlapping = (box1: faceapi.Box, box2: number[]) => {
-    const [x1, y1, w1, h1] = [box1.x, box1.y, box1.width, box1.height];
-    const [x2, y2, w2, h2] = box2;
-  
-    // Check if there is any overlap
-    return !(x2 + w2 < x1 || x2 > x1 + w1 || y2 + h2 < y1 || y2 > y1 + h1);
-  };
-  
 
   const drawFaces = (canvas: HTMLCanvasElement, faceApiResults: FaceApiResult[], customModelResults: any[], fps: string) => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -181,97 +180,65 @@ const Detection: React.FC = () => {
     ctx.fillStyle = 'white';
     ctx.fillText(`FPS: ${fps}`, 10, 25);
   
-    // Match bounding boxes
-    const matchedBoxes = matchBoundingBoxes(
-      faceApiResults.map((result) => result.detection.box),
-      customModelResults
-    );
-  
-    for (const match of matchedBoxes) {
-      const { faceApiBox, customBox } = match;
-  
+    for (const person of faceApiResults) {
       ctx.lineWidth = 1;
       ctx.strokeStyle = 'deepskyblue';
       ctx.fillStyle = 'deepskyblue';
       ctx.globalAlpha = 0.6;
       ctx.beginPath();
-      ctx.rect(faceApiBox.x, faceApiBox.y, faceApiBox.width, faceApiBox.height);
+      ctx.rect(person.detection.box.x, person.detection.box.y, person.detection.box.width, person.detection.box.height);
       ctx.stroke();
       ctx.globalAlpha = 1;
   
-      const expression = Object.entries(faceApiResults[0].expressions).sort((a, b) => b[1] - a[1]);
-  
-      const newPrediction: Prediction = {
-        id: predictions.length + 1,
-        userId: customBox.userId, // From custom model
-        expression: expression[0][0], // From faceapi
-        gender: faceApiResults[0].gender, // From faceapi
-        focus: customBox.class, // From custom model
-        confidence: customBox.confidence, // From custom model
-        time: new Date().toLocaleTimeString(),
-      };
-  
-      setPredictions((prev) => [...prev, newPrediction]);
-  
-      // Drawing additional information
+      const expression = Object.entries(person.expressions).sort((a, b) => b[1] - a[1]);
       ctx.fillStyle = 'lightblue';
-      ctx.fillText(`gender: ${Math.round(100 * faceApiResults[0].genderProbability)}% ${faceApiResults[0].gender}`, faceApiBox.x, faceApiBox.y - 30);
-      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, faceApiBox.x, faceApiBox.y - 20);
-      ctx.fillText(`ketertarikan: ${customBox.class}`, faceApiBox.x, faceApiBox.y - 10);
-      ctx.fillText(`user_id: ${customBox.userId} Confidence: ${customBox.confidence}`, faceApiBox.x, faceApiBox.y + faceApiBox.height);
-    }
-  };
+      ctx.fillText(`gender: ${Math.round(100 * person.genderProbability)}% ${person.gender}`, person.detection.box.x, person.detection.box.y - 30);
+      ctx.fillText(`keadaan emosional: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, person.detection.box.x, person.detection.box.y - 20);
   
+      const prediction = customModelResults.find((result: any) => isOverlapping(person.detection.box, result.box));
+      const cognitiveCondition = prediction ? prediction.expression : 'unknown';
+      const userId = prediction ? prediction.userId : 'unknown';
+      const confidence = prediction ? prediction.confidence : 'unknown';
+  
+      ctx.fillText(`kondisi kognitif: ${cognitiveCondition}`, person.detection.box.x, person.detection.box.y - 10);
+      ctx.fillText(`User: ${userId} Confidence: ${confidence}`, person.detection.box.x, person.detection.box.y);
+    }
+  };  
+
+  const isOverlapping = (box1: faceapi.Box, box2: number[]) => {
+    const [x1, y1, w1, h1] = [box1.x, box1.y, box1.width, box1.height];
+    const [x2, y2, w2, h2] = box2;
+    return !(x2 + w2 < x1 || x2 > x1 + w1 || y2 + h2 < y1 || y2 > y1 + h1);
+  };
 
   const dataURLtoBlob = (dataurl: string) => {
     const arr = dataurl.split(',');
-    const mime = arr[0].match(/:(.*?);/)?.[1];
+    const mime = arr[0].match(/:(.*?);/)![1];
     const bstr = atob(arr[1]);
-    let n = bstr.length;
+    const n = bstr.length;
     const u8arr = new Uint8Array(n);
-
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
+    for (let i = 0; i < n; i++) {
+      u8arr[i] = bstr.charCodeAt(i);
     }
-
     return new Blob([u8arr], { type: mime });
   };
 
-  const handleBulkInsert = async () => {
-    try {
-      const response = await axios.post('http://localhost:5000/save-predictions', predictions, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.status === 200) {
-        console.log('Predictions saved successfully');
-        setPredictions([]);
-      } else {
-        console.error('Failed to save predictions');
-      }
-    } catch (error) {
-      console.error('Error saving predictions:', error);
-    }
-  };
-
-  const handleSwitch = () => {
-    if (isWebcamActive) {
-      stream?.getTracks().forEach((track) => track.stop());
+  const handleToggleWebcam = () => {
+    setIsWebcamActive((prevIsActive) => !prevIsActive);
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
     } else {
       setupCamera();
     }
-    setIsWebcamActive(!isWebcamActive);
   };
-
 
   return (
     <PageContainer title="Detection" description="this is Detection page">
       <Box>
         <Grid container spacing={3}>
           <Grid item xs={12} lg={12}>
-            <Button variant="contained" color="primary" onClick={handleSwitch}>
+            <Button variant="contained" color="primary" onClick={handleToggleWebcam}>
               {isWebcamActive ? 'Turn Off Webcam' : 'Turn On Webcam'}
             </Button>
             <Box

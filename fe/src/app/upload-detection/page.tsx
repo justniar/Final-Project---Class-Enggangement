@@ -213,8 +213,8 @@ const UploadDetection: React.FC = () => {
       // Drawing additional information
       ctx.fillStyle = 'lightblue';
       ctx.fillText(`gender: ${Math.round(100 * faceApiResults[0].genderProbability)}% ${faceApiResults[0].gender}`, faceApiBox.x, faceApiBox.y - 30);
-      ctx.fillText(`ekspresi: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, faceApiBox.x, faceApiBox.y - 20);
-      ctx.fillText(`ketertarikan: ${customBox.class}`, faceApiBox.x, faceApiBox.y - 10);
+      ctx.fillText(`keadaan emosional: ${Math.round(100 * expression[0][1])}% ${expression[0][0]}`, faceApiBox.x, faceApiBox.y - 20);
+      ctx.fillText(`kondisi kognitif: ${customBox.class}`, faceApiBox.x, faceApiBox.y - 10);
       ctx.fillText(`NIM: ${customBox.userId} Confidence: ${customBox.confidence}`, faceApiBox.x, faceApiBox.y + faceApiBox.height);
     }
   };

@@ -44,7 +44,7 @@ import { Prediction } from '@/types/prediction';
                 </TableCell>
                 <TableCell>
                   <Typography variant="subtitle2" fontWeight={600}>
-                    Ekspresi
+                    Keadaan Emosional
                   </Typography>
                 </TableCell>
                 <TableCell>
@@ -54,7 +54,7 @@ import { Prediction } from '@/types/prediction';
                 </TableCell>
                 <TableCell>
                   <Typography variant="subtitle2" fontWeight={600}>
-                    Ketertarikan
+                    Kondisi Kognitif
                   </Typography>
                 </TableCell>
                 <TableCell>
