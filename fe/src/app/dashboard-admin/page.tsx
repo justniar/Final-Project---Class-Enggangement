@@ -10,6 +10,7 @@ import Keefektifan from '@/components/dashboard/Keefektifan';
 import SesiKuliah from '@/components/dashboard/SesiKuliah';
 import PerformaPendidik from '@/components/dashboard/PerformaPendidik';
 import Blog from '@/components/dashboard/Blog';
+import { fetchUser } from '@/utils/fetchUser';
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
