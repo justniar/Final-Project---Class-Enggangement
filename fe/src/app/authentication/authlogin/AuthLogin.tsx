@@ -56,13 +56,13 @@ const AuthLogin = ({ title, subtitle, subtext }: loginType) => {
             variant="subtitle1"
             fontWeight={600}
             component="label"
-            htmlFor="username"
+            htmlFor="email"
             mb="5px"
           >
             Email
           </Typography>
           <TextField
-            id="username"
+            id="email"
             variant="outlined"
             fullWidth
             value={email}

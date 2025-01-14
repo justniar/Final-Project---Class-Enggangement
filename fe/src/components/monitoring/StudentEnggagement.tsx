@@ -44,6 +44,11 @@ import { Prediction } from '@/types/prediction';
                 </TableCell>
                 <TableCell>
                   <Typography variant="subtitle2" fontWeight={600}>
+                    Confident
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="subtitle2" fontWeight={600}>
                     Keadaan Emosional
                   </Typography>
                 </TableCell>
@@ -82,6 +87,12 @@ import { Prediction } from '@/types/prediction';
                       {result.userId}
                     </Typography>
                   </TableCell>
+                  <TableCell>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      {result.confidence} %
+                    </Typography>
+                  </TableCell>
+                  <TableCell></TableCell>
                   <TableCell>
                     <Typography color="textSecondary" variant="subtitle2" fontWeight={400}>
                       {result.expression}
