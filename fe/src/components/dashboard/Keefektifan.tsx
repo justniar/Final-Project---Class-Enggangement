@@ -7,13 +7,11 @@ import { IconArrowDownRight, IconCurrencyDollar } from '@tabler/icons-react';
 import DashboardCard from '@/components/shared/DashboardCard';
 
 const Keefektifan = () => {
-  // chart color
   const theme = useTheme();
   const secondary = theme.palette.secondary.main;
   const secondarylight = '#f5fcff';
   const errorlight = '#fdede8';
 
-  // chart
   const optionscolumnchart: any = {
     chart: {
       type: 'area',

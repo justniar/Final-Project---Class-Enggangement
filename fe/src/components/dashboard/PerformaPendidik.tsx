@@ -15,37 +15,37 @@ const products = [
         id: "1",
         name: "Sunil Joshi",
         post: "Web Designer",
-        pname: "Elite Admin",
-        priority: "Low",
+        matakuliah: "Pemograman Dasar",
+        fokus: "Rendah",
         pbg: "primary.main",
-        budget: "3.9",
+        sesi: "1",
     },
     {
         id: "2",
         name: "Andrew McDownland",
         post: "Project Manager",
-        pname: "Real Homes WP Theme",
-        priority: "Medium",
+        matakuliah: "Pemograman Bergerak",
+        fokus: "Sedang",
         pbg: "secondary.main",
-        budget: "24.5",
+        sesi: "1",
     },
     {
         id: "3",
         name: "Christopher Jamil",
         post: "Project Manager",
-        pname: "MedicalPro WP Theme",
-        priority: "High",
+        matakuliah: "Logika Pemograman",
+        fokus: "Tinggi",
         pbg: "error.main",
-        budget: "12.8",
+        sesi: "2",
     },
     {
         id: "4",
         name: "Nirav Joshi",
         post: "Frontend Engineer",
-        pname: "Hosting Press HTML",
-        priority: "Critical",
+        matakuliah: "Desain",
+        fokus: "Sangat Rendah",
         pbg: "success.main",
-        budget: "2.4",
+        sesi: "2",
     },
 ];
 
@@ -128,7 +128,7 @@ const PerformaPendidik = () => {
                                 </TableCell>
                                 <TableCell>
                                     <Typography color="textSecondary" variant="subtitle2" fontWeight={400}>
-                                        {product.pname}
+                                        {product.matakuliah}
                                     </Typography>
                                 </TableCell>
                                 <TableCell>
@@ -139,11 +139,11 @@ const PerformaPendidik = () => {
                                             color: "#fff",
                                         }}
                                         size="small"
-                                        label={product.priority}
+                                        label={product.fokus}
                                     ></Chip>
                                 </TableCell>
                                 <TableCell align="right">
-                                    <Typography variant="h6">${product.budget}k</Typography>
+                                    <Typography variant="h6">{product.sesi}</Typography>
                                 </TableCell>
                             </TableRow>
                         ))}
